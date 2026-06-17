@@ -1,0 +1,746 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 24px;
+  max-width: 1800px;
+  margin: 0 auto;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--glass-border);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.logoArea {
+  display: flex;
+  flex-direction: column;
+}
+
+.logoTitle {
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoSubtitle {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+
+.statusTicker {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid var(--border-glow);
+  padding: 12px 20px;
+  border-radius: 12px;
+  animation: pulseGlow 4s infinite;
+}
+
+.tickerLabel {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tickerVal {
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.tickerSub {
+  color: var(--secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Main Dashboard Grid */
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: 320px 1fr 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1400px) {
+  .dashboardGrid {
+    grid-template-columns: 280px 1fr;
+  }
+  .rosterSidebar {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1024px) {
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+  }
+  .rosterSidebar, .settingsSidebar {
+    grid-column: 1;
+  }
+}
+
+/* Sidebars & Main Panels */
+.settingsSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mainSection {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rosterSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Card layout */
+.card {
+  composes: glow-panel from global;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.card:hover {
+  z-index: 10;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 12px;
+}
+
+.cardTitle {
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardHeaderAction {
+  font-size: 0.8rem;
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cardHeaderAction:hover {
+  text-decoration: underline;
+}
+
+/* Scarcity Display */
+.scarcityGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.scarcityItem {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.scarcityItem:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 20;
+}
+
+.scarcityItem::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--border-muted);
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+}
+
+.scarcityItem[data-scarcity="high"]::before {
+  background: linear-gradient(90deg, var(--danger), var(--warning));
+}
+
+.scarcityItem[data-scarcity="med"]::before {
+  background: var(--warning);
+}
+
+.scarcityItem[data-scarcity="low"]::before {
+  background: var(--success);
+}
+
+.scarcityPos {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.scarcityDropoff {
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.scarcityDropoffUnit {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.scarcityCount {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Rich Scarcity Tooltips */
+.scarcityTooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translate(-50%, -10px);
+  width: 290px;
+  background: #0b0f19;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(99, 102, 241, 0.15);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+  z-index: 1000;
+  pointer-events: none;
+  font-family: var(--font-sans);
+  backdrop-filter: blur(16px);
+  text-align: left;
+}
+
+.scarcityTooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent #0b0f19 transparent;
+}
+
+/* Left Aligned Tooltip */
+.scarcityTooltipLeft {
+  left: 0;
+  transform: translate(0, -10px);
+}
+.scarcityTooltipLeft::after {
+  top: auto;
+  bottom: 100%;
+  left: 30px;
+  transform: none;
+  border-color: transparent transparent #0b0f19 transparent;
+}
+
+/* Right Aligned Tooltip */
+.scarcityTooltipRight {
+  left: auto;
+  right: 0;
+  transform: translate(0, -10px);
+}
+.scarcityTooltipRight::after {
+  top: auto;
+  bottom: 100%;
+  left: auto;
+  right: 30px;
+  transform: none;
+  border-color: transparent transparent #0b0f19 transparent;
+}
+
+/* Hover effects to show tooltips */
+.scarcityItem:hover .scarcityTooltip {
+  visibility: visible;
+  opacity: 1;
+}
+.scarcityItem:hover .scarcityTooltip:not(.scarcityTooltipLeft):not(.scarcityTooltipRight) {
+  transform: translate(-50%, 0);
+}
+.scarcityItem:hover .scarcityTooltipLeft {
+  transform: translate(0, 0);
+}
+.scarcityItem:hover .scarcityTooltipRight {
+  transform: translate(0, 0);
+}
+
+.tooltipHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.tooltipHeader span:first-child {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tooltipRemaining {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tooltipSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tooltipSectionTitle {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tooltipPlayerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.tooltipPlayerName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tooltipPlayerValue {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.tooltipExpectedList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltipExpectedPlayer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+}
+
+.tooltipExpectedPlayer:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tooltipExpectedLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tooltipPlayerNameMini {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.tooltipPlayerValueMini {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.tooltipExpectedRight {
+  display: flex;
+  align-items: center;
+}
+
+.tooltipProbBadge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.tooltipFooter {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltipFooterRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.tooltipFooterTotal {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
+
+/* Recommendations */
+.recList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(99, 102, 241, 0.03);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  transition: all 0.2s;
+}
+
+.recItem:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.25);
+  transform: translateX(2px);
+}
+
+.recItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.recRank {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.15);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.recName {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recSub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.recItemRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.recMetric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.recMetricLabel {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.recMetricVal {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.recReturnGlow {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.recReturnGlow[data-level="high"] {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.recReturnGlow[data-level="med"] {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.recReturnGlow[data-level="low"] {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Draft Board Pick Sequence (Compact Sidebar) */
+.draftSeqList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.draftSeqItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-muted);
+}
+
+.draftSeqItemActive {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+}
+
+.draftSeqItemDrafted {
+  opacity: 0.6;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.draftSeqTeamName {
+  font-weight: 600;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Roster Table Tracker */
+.rosterList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rosterSlot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-muted);
+  font-size: 0.85rem;
+}
+
+.rosterSlotFilled {
+  background: rgba(6, 182, 212, 0.03);
+  border-color: rgba(6, 182, 212, 0.15);
+}
+
+.rosterSlotLabel {
+  font-weight: 700;
+  color: var(--text-secondary);
+  width: 45px;
+}
+
+.rosterPlayerName {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+
+.rosterPlayerValue {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+/* Table Filters & Header Actions */
+.tableHeaderActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.searchWrapper {
+  position: relative;
+  flex-grow: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  composes: premium-input from global;
+  width: 100%;
+  padding-left: 36px;
+}
+
+.filterGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  composes: btn from global;
+  composes: btn-secondary from global;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
+.filterBtnActive {
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-color: var(--primary) !important;
+}
+
+/* Target statistics comparing user vs average */
+.statBarGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.statBarItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statBarLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.statBarContainer {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.statBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 4px;
+  transition: width 0.4s ease-out;
+}
+
+.statBarTargetLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 4px var(--accent);
+}
+
+.statBarTargetLabel {
+  font-size: 0.7rem;
+  color: var(--accent);
+}
