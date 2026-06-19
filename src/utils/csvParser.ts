@@ -134,6 +134,8 @@ export function parsePlayersFromCSVs(hittersText: string, pitchersText: string):
       minPick: 0, // will be reassigned densified
       maxPick: 0, // will be reassigned densified
       value: isNaN(value) ? 0.0 : value,
+      consensusValue: isNaN(value) ? 0.0 : value,
+      maxSystemValue: isNaN(value) ? 0.0 : value,
       isPitcher: false,
       stats: {
         AB: Math.round(rawPA * 0.9), // approximation of AB from PA
@@ -204,6 +206,8 @@ export function parsePlayersFromCSVs(hittersText: string, pitchersText: string):
       minPick: 0, // will be reassigned densified
       maxPick: 0, // will be reassigned densified
       value: isNaN(value) ? 0.0 : value,
+      consensusValue: isNaN(value) ? 0.0 : value,
+      maxSystemValue: isNaN(value) ? 0.0 : value,
       isPitcher: true,
       stats: {
         IP: isNaN(IP) ? 100 : IP,
@@ -247,4 +251,66 @@ export function parsePlayersFromCSVs(hittersText: string, pitchersText: string):
   }
 
   return parsedPlayers;
+}
+
+export function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/[^a-z]/g, "") // keep only letters
+    .replace(/jr|sr|iii|ii$/g, ""); // strip common suffixes
+}
+
+export function computeConsensusValues(
+  primary: Player[],
+  oopsy: Player[],
+  thebat: Player[],
+  steamer: Player[]
+): Player[] {
+  // Build name-to-player maps for fast lookup
+  const makeMap = (list: Player[]) => {
+    const map = new Map<string, Player>();
+    list.forEach(p => {
+      const key = normalizeName(p.name) + "_" + (p.isPitcher ? "P" : "H");
+      map.set(key, p);
+    });
+    return map;
+  };
+
+  const oopsyMap = makeMap(oopsy);
+  const thebatMap = makeMap(thebat);
+  const steamerMap = makeMap(steamer);
+
+  return primary.map(p => {
+    const key = normalizeName(p.name) + "_" + (p.isPitcher ? "P" : "H");
+    const values: number[] = [];
+
+    // Check Oopsy
+    const oopsyMatch = oopsyMap.get(key);
+    if (oopsyMatch !== undefined) values.push(oopsyMatch.value);
+
+    // Check THE BAT
+    const thebatMatch = thebatMap.get(key);
+    if (thebatMatch !== undefined) values.push(thebatMatch.value);
+
+    // Check Steamer
+    const steamerMatch = steamerMap.get(key);
+    if (steamerMatch !== undefined) values.push(steamerMatch.value);
+
+    // If no match found in any of the maps, just use the player's primary value
+    if (values.length === 0) {
+      values.push(p.value);
+    }
+
+    const sum = values.reduce((a, b) => a + b, 0);
+    const avg = sum / values.length;
+    const maxVal = Math.max(...values);
+
+    return {
+      ...p,
+      consensusValue: Math.round(avg * 100) / 100,
+      maxSystemValue: Math.round(maxVal * 100) / 100
+    };
+  });
 }

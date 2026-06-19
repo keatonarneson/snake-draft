@@ -9,6 +9,8 @@ interface SettingsPanelProps {
   numRounds: number;
   simSpeed: "manual" | "paced" | "instant";
   isDraftStarted: boolean;
+  projectionSystem: "oopsy" | "thebat" | "steamer" | "mock";
+  onProjectionSystemChange: (system: "oopsy" | "thebat" | "steamer" | "mock") => void;
   onConfigChange: (config: {
     numTeams?: number;
     userPosition?: number;
@@ -74,6 +76,8 @@ export default function SettingsPanel({
   numRounds,
   simSpeed,
   isDraftStarted,
+  projectionSystem,
+  onProjectionSystemChange,
   onConfigChange,
   onReset,
   onAutoPick,
@@ -174,15 +178,36 @@ export default function SettingsPanel({
             className="premium-input"
             type="number"
             min={5}
-            max={30}
+            max={40}
             value={numRounds}
             disabled={isDraftStarted}
             onChange={(e) => {
-              const val = Math.max(5, Math.min(30, parseInt(e.target.value) || 23));
+              const val = Math.max(5, Math.min(40, parseInt(e.target.value) || 30));
               onConfigChange({ numRounds: val });
             }}
             style={{ width: "100%" }}
           />
+        </div>
+
+        {/* Projections System */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
+            Projections Database
+          </label>
+          <select
+            className="premium-input"
+            value={projectionSystem}
+            disabled={isDraftStarted}
+            onChange={(e) => {
+              onProjectionSystemChange(e.target.value as "oopsy" | "thebat" | "steamer" | "mock");
+            }}
+            style={{ width: "100%" }}
+          >
+            <option value="oopsy">Oopsy Projections</option>
+            <option value="thebat">THE BAT Projections</option>
+            <option value="steamer">Steamer Projections</option>
+            <option value="mock">Mock Projections (Built-in)</option>
+          </select>
         </div>
 
         {/* Simulation Speed */}

@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import styles from "../app/page.module.css";
 import { Player } from "../utils/sampleData";
-import { Recommendation, calculateAdpValue, calculateCpuScore } from "../utils/draftEngine";
+import { Recommendation, calculateAdpValue, calculateCpuScore, calculateTargetMetrics, DraftPick, ScarcityInfo, getCpuArchetype } from "../utils/draftEngine";
 
 interface PlayerListProps {
   availablePlayers: Player[];
@@ -17,6 +17,12 @@ interface PlayerListProps {
   numRounds?: number;
   isDraftStarted?: boolean;
   isDraftComplete?: boolean;
+  roundTargets?: Record<number, { position: string | null; playerIds: string[] }>;
+  onToggleTargetPlayer?: (playerId: string) => void;
+  picks?: DraftPick[];
+  userTeamIndex?: number;
+  scarcityMap?: Record<string, ScarcityInfo>;
+  cpuSavesStrategies?: string[];
 }
 
 type SortField = "value" | "adp" | "pReturn" | "name" | "score";
@@ -34,6 +40,12 @@ export default function PlayerList({
   numRounds,
   isDraftStarted,
   isDraftComplete,
+  roundTargets = {},
+  onToggleTargetPlayer,
+  picks = [],
+  userTeamIndex = 0,
+  scarcityMap = {},
+  cpuSavesStrategies = [],
 }: PlayerListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPosition, setSelectedPosition] = useState("ALL");
@@ -261,6 +273,81 @@ export default function PlayerList({
               const recScore = rec ? rec.score : player.value;
               const returnLevel = getReturnLevel(pReturn);
 
+              // Build the 3-point timeline for the Return Prob cell
+              const timeline = (() => {
+                if (isDrafted) return [];
+                
+                const userPicks = (picks || []).filter((p) => p.teamIndex === (userTeamIndex ?? 0));
+                const metrics = calculateTargetMetrics(
+                  player,
+                  (currentPickIndex ?? 0) + 1,
+                  userPicks,
+                  new Set(draftedPlayers.map(d => d.player.id))
+                );
+                
+                const list: { round: number; label: string; probability: number }[] = [];
+                const nextPick = userPicks.find((up) => up.overallPick >= (currentPickIndex ?? 0) + 1);
+                const nextRound = nextPick ? nextPick.round : -1;
+                const optRound = metrics.optimalRound;
+                
+                let targetRound = -1;
+                Object.keys(roundTargets).forEach((roundStr) => {
+                  const r = parseInt(roundStr);
+                  if (roundTargets[r]?.playerIds.includes(player.id)) {
+                    targetRound = r;
+                  }
+                });
+                
+                const roundsToInclude = new Set<number>();
+                if (nextRound !== -1) roundsToInclude.add(nextRound);
+                if (optRound !== -1) roundsToInclude.add(optRound);
+                if (targetRound !== -1) roundsToInclude.add(targetRound);
+                
+                let sortedRounds = Array.from(roundsToInclude).sort((a, b) => a - b);
+                
+                if (sortedRounds.length < 3) {
+                  const futureRounds = userPicks
+                    .filter((up) => up.overallPick >= (currentPickIndex ?? 0) + 1)
+                    .map((up) => up.round);
+                    
+                  for (const r of futureRounds) {
+                    if (sortedRounds.length >= 3) break;
+                    if (!roundsToInclude.has(r)) {
+                      roundsToInclude.add(r);
+                      sortedRounds.push(r);
+                    }
+                  }
+                  sortedRounds = sortedRounds.sort((a, b) => a - b);
+                }
+                
+                sortedRounds.forEach((r) => {
+                  const probEntry = metrics.survivalProbabilities.find((sp: any) => sp.round === r);
+                  let probability = 0;
+                  if (probEntry) {
+                    probability = probEntry.probability;
+                  } else if (r < nextRound) {
+                    probability = 1.0;
+                  } else {
+                    probability = 0.0;
+                  }
+                  
+                  const labels: string[] = [];
+                  if (r === nextRound) labels.push("Next");
+                  if (r === optRound) labels.push("Sugg");
+                  if (r === targetRound) labels.push("Target");
+                  
+                  const labelStr = labels.length > 0 ? `Rd ${r} (${labels.join("/")})` : `Rd ${r}`;
+                  
+                  list.push({
+                    round: r,
+                    label: labelStr,
+                    probability,
+                  });
+                });
+                
+                return list;
+              })();
+
               return (
                 <React.Fragment key={player.id}>
                   <tr 
@@ -288,7 +375,35 @@ export default function PlayerList({
                     {/* Name / Team / Pos */}
                     <td>
                       <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{player.name}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{player.name}</span>
+                          {onToggleTargetPlayer && (() => {
+                            const isPlayerTargeted = Object.values(roundTargets).some((t) => t.playerIds.includes(player.id));
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleTargetPlayer(player.id);
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  padding: 0,
+                                  cursor: "pointer",
+                                  color: isPlayerTargeted ? "var(--warning)" : "var(--text-muted)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  transition: "color 0.2s",
+                                }}
+                                title={isPlayerTargeted ? "Remove target" : "Target player"}
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill={isPlayerTargeted ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5">
+                                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                              </button>
+                            );
+                          })()}
+                        </div>
                         <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "2px" }}>
                           <span className="badge badge-secondary" style={{ fontSize: "0.65rem", padding: "1px 6px" }}>{player.team}</span>
                           <span className="badge badge-primary" style={{ fontSize: "0.65rem", padding: "1px 6px" }}>{player.positions.join(",")}</span>
@@ -296,24 +411,24 @@ export default function PlayerList({
                       </div>
                     </td>
 
-                    {/* ADP (Min - Max) */}
+                    {/* ADP (Range) */}
                     <td>
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{player.adp.toFixed(1)}</span>
-                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                          ({player.minPick} - {player.maxPick})
+                      <div style={{ display: "flex", flexDirection: "column", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                        <span style={{ fontWeight: 600 }}>{player.adp.toFixed(0)}</span>
+                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                          ({player.minPick}-{player.maxPick})
                         </span>
                       </div>
                     </td>
 
-                    {/* Market Dollar value */}
+                    {/* Market $ */}
                     <td>
-                      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--text-secondary)" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
                         ${calculateAdpValue(player.adp).toFixed(1)}
                       </span>
                     </td>
 
-                    {/* Dollar value */}
+                    {/* Auction $ */}
                     <td>
                       <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: player.value >= 0 ? "var(--success)" : "var(--danger)" }}>
                         ${player.value.toFixed(1)}
@@ -340,7 +455,22 @@ export default function PlayerList({
                       {isDrafted ? (
                         <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>—</span>
                       ) : (
-                        <span className={`${styles.recReturnGlow}`} data-level={returnLevel} style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>
+                        <span
+                          className={`badge ${
+                            returnLevel === "high"
+                              ? "badge-success"
+                              : returnLevel === "med"
+                              ? "badge-warning"
+                              : "badge-danger"
+                          }`}
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            cursor: "help"
+                          }}
+                          title={timeline.map(t => `${t.label}: ${Math.round(t.probability * 100)}%`).join("\n")}
+                        >
                           {formatPercent(pReturn)}
                         </span>
                       )}
@@ -390,7 +520,22 @@ export default function PlayerList({
                             const cpuRoster = draftedPlayers
                               .filter((d) => d.teamIndex === currentTeamIndex)
                               .map((d) => d.player);
-                            cpuDetails = calculateCpuScore(player, pCurr, cpuRoster, numRounds || 23, 0.5);
+                            const cpuArchetype = getCpuArchetype(currentTeamIndex, userTeamIndex);
+                            const strategy = cpuSavesStrategies[currentTeamIndex] || "balanced";
+                            const allPlayers = [...availablePlayers, ...draftedPlayers.map(d => d.player)];
+                            cpuDetails = calculateCpuScore(
+                              player,
+                              pCurr,
+                              cpuRoster,
+                              numRounds || 30,
+                              cpuArchetype,
+                              scarcityMap,
+                              currentPickIndex,
+                              picks,
+                              allPlayers,
+                              strategy,
+                              0.5
+                            );
                           }
 
                           return (
@@ -486,60 +631,133 @@ export default function PlayerList({
                                         </span>
                                       </div>
                                       
-                                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
-                                        <span style={{ color: "var(--text-secondary)" }}>Scarcity Premium (wt: {rec.weights.scarcity}):</span>
-                                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>
-                                          +${(rec.scarcityDropOff * (1 - rec.pReturn) * rec.weights.scarcity).toFixed(1)}
-                                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
-                                            (drop: ${rec.scarcityDropOff.toFixed(1)}, risk: {Math.round((1 - rec.pReturn) * 100)}%)
-                                          </span>
-                                        </span>
+                                      <div style={{ display: "flex", flexDirection: "column" }}>
+                                        {(() => {
+                                         const urgencyCoeff = rec.weights.draftUrgency ?? 1.0;
+                                         const weightedScarcity = rec.scarcityDropOff * rec.weights.scarcity * urgencyCoeff;
+                                         const weightedValuePreservation = (rec.scarcityDetails?.valuePreservation ?? 0) * rec.weights.scarcity * urgencyCoeff;
+                                         const weightedScarcityRank = (rec.scarcityDetails?.scarcityRank ?? 0) * rec.weights.scarcity * urgencyCoeff;
+                                         const urgencyTimingBoost = (1.0 - rec.pReturn) * Math.max(0.0, player.value) * 0.35 * urgencyCoeff;
+                                         
+                                         return (
+                                           <>
+                                             {/* Scarcity Premium Group */}
+                                             <div style={{ borderLeft: "2px solid rgba(255,255,255,0.08)", paddingLeft: "8px", margin: "4px 0", display: "flex", flexDirection: "column", gap: "2px" }}>
+                                               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                                 <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Scarcity Premium (wt: {rec.weights.scarcity}):</span>
+                                                 <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                                                   +${weightedScarcity.toFixed(1)}
+                                                   <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
+                                                     (risk: {Math.round((1 - rec.pReturn) * 100)}%)
+                                                   </span>
+                                                 </span>
+                                               </div>
+                                               
+                                               {rec.scarcityDetails && (
+                                                 <>
+                                                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", paddingLeft: "8px" }}>
+                                                     <span style={{ color: "var(--text-muted)" }}>• Value Preservation:</span>
+                                                     <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
+                                                       +${weightedValuePreservation.toFixed(1)}
+                                                       <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginLeft: "4px" }}>
+                                                         (gap: ${rec.scarcityDetails.valuePreservation.toFixed(1)})
+                                                       </span>
+                                                     </span>
+                                                   </div>
+                                                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", paddingLeft: "8px" }}>
+                                                     <span style={{ color: "var(--text-muted)" }}>• Scarcity Rank Bonus:</span>
+                                                     <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
+                                                       +${weightedScarcityRank.toFixed(1)}
+                                                       <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginLeft: "4px" }}>
+                                                         (wt: {Math.round(rec.scarcityDetails.qualityWeight * 100)}%)
+                                                       </span>
+                                                     </span>
+                                                   </div>
+                                                   
+                                                   {/* Dynamic explanation */}
+                                                   <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic", paddingLeft: "8px", marginTop: "2px", borderTop: "1px solid rgba(255,255,255,0.03)", paddingTop: "2px" }}>
+                                                     {rec.scarcityDetails.qualityWeight >= 0.7 ? (
+                                                       <span>💡 <strong>Strong value preservation:</strong> Top-tier {rec.scarcityDetails.position} who secures high value before the remaining pool thins.</span>
+                                                     ) : rec.scarcityDetails.qualityWeight >= 0.3 ? (
+                                                       <span>💡 <strong>Limited preservation:</strong> Solid alternative at {rec.scarcityDetails.position}. Pool is thin, but player quality limits reach benefit.</span>
+                                                     ) : (
+                                                       <span>💡 <strong>Replacement level:</strong> Low-value {rec.scarcityDetails.position} depth. Scarcity premium is capped to avoid overpaying.</span>
+                                                     )}
+                                                   </div>
+                                                 </>
+                                               )}
+                                             </div>
+
+                                             {/* Draft Urgency Timing Boost */}
+                                             {urgencyTimingBoost > 0 && (
+                                               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                                 <span style={{ color: "var(--text-secondary)" }}>Draft Urgency Timing Boost (wt: {urgencyCoeff.toFixed(1)}):</span>
+                                                 <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--success)" }}>
+                                                   +${urgencyTimingBoost.toFixed(1)}
+                                                 </span>
+                                               </div>
+                                             )}
+
+                                             {rec.weights.upside > 0 && (
+                                               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                                 <span style={{ color: "var(--text-secondary)" }}>Upside Bonus (wt: {rec.weights.upside}):</span>
+                                                 <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--success)" }}>
+                                                   +${rec.upsideBonus.toFixed(1)}
+                                                   <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
+                                                     (gap: {(player.adp - player.minPick).toFixed(0)} picks)
+                                                   </span>
+                                                 </span>
+                                               </div>
+                                             )}
+
+                                             {rec.weights.reach > 0 && rec.reachPenalty < 0 && (
+                                               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                                 <span style={{ color: "var(--text-secondary)" }}>Reach Penalty (wt: {rec.weights.reach}):</span>
+                                                 <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--danger)" }}>
+                                                   ${rec.reachPenalty.toFixed(1)}
+                                                   <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
+                                                     (reach: {(player.adp - (draftedPlayers.length + 1)).toFixed(0)} picks)
+                                                   </span>
+                                                 </span>
+                                               </div>
+                                             )}
+
+                                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                               <span style={{ color: "var(--text-secondary)" }}>Forced to Bench Discount:</span>
+                                               <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: rec.isBench ? "var(--warning)" : "var(--text-muted)" }}>
+                                                 {rec.isBench ? `YES (x${rec.weights.benchDiscount})` : "NO (x1.0)"}
+                                               </span>
+                                             </div>
+                                           </>
+                                         );
+                                       })()}
                                       </div>
 
-                                      {rec.weights.upside > 0 && (
-                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
-                                          <span style={{ color: "var(--text-secondary)" }}>Upside Bonus (wt: {rec.weights.upside}):</span>
-                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--success)" }}>
-                                            +${rec.upsideBonus.toFixed(1)}
-                                            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
-                                              (gap: {(player.adp - player.minPick).toFixed(0)} picks)
-                                            </span>
+                                      <div style={{ borderTop: "1px dashed rgba(255,255,255,0.08)", paddingTop: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-primary)" }}>Final Score:</span>
+                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: "1rem", color: "var(--primary)" }}>
+                                            {rec.score.toFixed(1)}
+                                          </span>
+                                          <span style={{ fontSize: "0.55rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", textAlign: "right", maxWidth: "240px", wordBreak: "break-all" }}>
+                                            {(() => {
+                                              const urgencyCoeff = rec.weights.draftUrgency ?? 1.0;
+                                              const weightedScarcity = rec.scarcityDropOff * rec.weights.scarcity * urgencyCoeff;
+                                              const urgencyTimingBoost = (1.0 - rec.pReturn) * Math.max(0.0, player.value) * 0.35 * urgencyCoeff;
+                                             
+                                             const formulaParts = [
+                                               `$${player.value.toFixed(1)} base`,
+                                               `+$${weightedScarcity.toFixed(1)} scarcity`,
+                                               `${rec.statsAdjustment >= 0 ? "+" : ""}$${rec.statsAdjustment.toFixed(1)} stats`,
+                                               rec.upsideBonus > 0 ? `+$${rec.upsideBonus.toFixed(1)} upside` : "",
+                                               rec.reachPenalty < 0 ? `-$${Math.abs(rec.reachPenalty).toFixed(1)} reach` : "",
+                                               urgencyTimingBoost > 0 ? `+$${urgencyTimingBoost.toFixed(1)} urgency` : ""
+                                             ].filter(Boolean).join(" ");
+
+                                             return rec.isBench ? `(${formulaParts}) * ${rec.weights.benchDiscount}` : formulaParts;
+                                           })()}
                                           </span>
                                         </div>
-                                      )}
-
-                                      {rec.weights.reach > 0 && rec.reachPenalty < 0 && (
-                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
-                                          <span style={{ color: "var(--text-secondary)" }}>Reach Penalty (wt: {rec.weights.reach}):</span>
-                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--danger)" }}>
-                                            ${rec.reachPenalty.toFixed(1)}
-                                            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
-                                              (reach: {(player.adp - (draftedPlayers.length + 1)).toFixed(0)} picks)
-                                            </span>
-                                          </span>
-                                        </div>
-                                      )}
-
-                                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
-                                        <span style={{ color: "var(--text-secondary)" }}>Forced to Bench Discount:</span>
-                                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: rec.isBench ? "var(--warning)" : "var(--text-muted)" }}>
-                                          {rec.isBench ? `YES (x${rec.weights.benchDiscount})` : "NO (x1.0)"}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    <div style={{ borderTop: "1px dashed rgba(255,255,255,0.08)", paddingTop: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-primary)" }}>Final Score:</span>
-                                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: "1rem", color: "var(--primary)" }}>
-                                          {rec.score.toFixed(1)}
-                                        </span>
-                                        <span style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", textAlign: "right" }}>
-                                          {rec.isBench 
-                                            ? `($${player.value.toFixed(1)} + $${(rec.scarcityDropOff * (1 - rec.pReturn) * rec.weights.scarcity).toFixed(1)} scarcity ${rec.statsAdjustment >= 0 ? "+" : ""}${rec.statsAdjustment.toFixed(1)} stats ${rec.upsideBonus > 0 ? ` +$${rec.upsideBonus.toFixed(1)}` : ""}${rec.reachPenalty < 0 ? ` -$${Math.abs(rec.reachPenalty).toFixed(1)}` : ""}) * ${rec.weights.benchDiscount}`
-                                            : `$${player.value.toFixed(1)} + $${(rec.scarcityDropOff * (1 - rec.pReturn) * rec.weights.scarcity).toFixed(1)} scarcity ${rec.statsAdjustment >= 0 ? "+" : ""}${rec.statsAdjustment.toFixed(1)} stats ${rec.upsideBonus > 0 ? ` +$${rec.upsideBonus.toFixed(1)}` : ""}${rec.reachPenalty < 0 ? ` -$${Math.abs(rec.reachPenalty).toFixed(1)}` : ""}`
-                                          }
-                                        </span>
                                       </div>
                                     </div>
                                   </div>
@@ -558,77 +776,135 @@ export default function PlayerList({
 
                                 {isDraftActive && cpuDetails ? (
                                   <div style={{ background: "rgba(0,0,0,0.15)", padding: "12px", borderRadius: "8px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                                    <div style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--text-secondary)", borderBottom: "1px dashed rgba(255,255,255,0.08)", paddingBottom: "6px", display: "flex", justifyContent: "space-between" }}>
-                                      <span>Formula: 80% ADP + 10% Proj + 7% Need + 3% Rand</span>
+                                    <div style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--text-secondary)", borderBottom: "1px dashed rgba(255,255,255,0.08)", paddingBottom: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                      <span className="badge badge-accent" style={{ fontSize: "0.55rem", padding: "1px 6px" }}>
+                                        {getCpuArchetype(currentTeamIndex, userTeamIndex).toUpperCase()} CPU
+                                      </span>
                                       <span className="badge badge-primary" style={{ fontSize: "0.6rem", padding: "1px 6px" }}>{currentTeamName}</span>
                                     </div>
 
                                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                      {/* Base Value */}
                                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
-                                        <span style={{ color: "var(--text-secondary)" }}>1. ADP/Market Score (80%):</span>
+                                        <span style={{ color: "var(--text-secondary)" }}>Base Value (ADP + Consensus):</span>
                                         <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>
-                                          {(cpuDetails.adpScore * 0.80).toFixed(2)}
-                                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
-                                            (raw: {cpuDetails.adpScore.toFixed(1)})
-                                          </span>
+                                          ${cpuDetails.baseValue.toFixed(2)}
                                         </span>
                                       </div>
-
-                                      {/* Sub-breakdown of ADP Score */}
-                                      <div style={{ paddingLeft: "12px", display: "flex", flexDirection: "column", gap: "2px", borderLeft: "2px solid rgba(255,255,255,0.05)" }}>
+                                      <div style={{ paddingLeft: "12px", display: "flex", flexDirection: "column", gap: "1px", borderLeft: "2px solid rgba(255,255,255,0.05)", marginBottom: "4px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                                          <span>Base Market Value ($):</span>
-                                          <span style={{ fontFamily: "var(--font-mono)" }}>${cpuDetails.marketVal.toFixed(1)}</span>
+                                          <span>• ADP Market ($):</span>
+                                          <span style={{ fontFamily: "var(--font-mono)" }}>${cpuDetails.adpDollars.toFixed(1)}</span>
                                         </div>
-                                        {cpuDetails.penalty > 0 && (
-                                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--danger)" }}>
-                                            <span>Reach Penalty:</span>
-                                            <span style={{ fontFamily: "var(--font-mono)" }}>-${cpuDetails.penalty.toFixed(1)}</span>
-                                          </div>
-                                        )}
-                                        {cpuDetails.bonus > 0 && (
-                                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--success)" }}>
-                                            <span>Slide Bonus:</span>
-                                            <span style={{ fontFamily: "var(--font-mono)" }}>+${cpuDetails.bonus.toFixed(1)}</span>
-                                          </div>
-                                        )}
-                                        {cpuDetails.urgency > 0 && (
-                                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--warning)" }}>
-                                            <span>ADP Urgency:</span>
-                                            <span style={{ fontFamily: "var(--font-mono)" }}>+${cpuDetails.urgency.toFixed(1)}</span>
-                                          </div>
-                                        )}
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                                          <span>• Consensus ($):</span>
+                                          <span style={{ fontFamily: "var(--font-mono)" }}>${cpuDetails.consensusDollars.toFixed(1)}</span>
+                                        </div>
                                       </div>
 
-                                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginTop: "4px" }}>
-                                        <span style={{ color: "var(--text-secondary)" }}>2. Proj Value Score (10%):</span>
-                                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>
-                                          {(cpuDetails.projScore * 0.10).toFixed(2)}
-                                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
-                                            (raw: {cpuDetails.projScore.toFixed(1)})
+                                      {/* Roster Need Bonus */}
+                                      {cpuDetails.rosterNeedBonus > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                          <span style={{ color: "var(--text-secondary)" }}>Roster Need Bonus:</span>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--success)" }}>
+                                            +${cpuDetails.rosterNeedBonus.toFixed(2)}
                                           </span>
-                                        </span>
-                                      </div>
+                                        </div>
+                                      )}
 
+                                      {/* Category Need Bonus */}
+                                      {cpuDetails.categoryNeedBonus > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                          <span style={{ color: "var(--text-secondary)" }}>Category Need Bonus:</span>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--success)" }}>
+                                            +${cpuDetails.categoryNeedBonus.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Position Run Bonus */}
+                                      {cpuDetails.positionRunBonus > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                          <span style={{ color: "var(--text-secondary)" }}>Position Run Bonus:</span>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--success)" }}>
+                                            +${cpuDetails.positionRunBonus.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Scarcity Bonus */}
+                                      {cpuDetails.scarcityBonus > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                          <span style={{ color: "var(--text-secondary)" }}>Scarcity Bonus:</span>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--success)" }}>
+                                            +${cpuDetails.scarcityBonus.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Role Security Bonus */}
                                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
-                                        <span style={{ color: "var(--text-secondary)" }}>3. Roster Need Score (7%):</span>
-                                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>
-                                          {(cpuDetails.needScore * 0.07).toFixed(2)}
-                                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
-                                            ({cpuDetails.isBench ? "Bench: 2.0" : "Active: 30.0"})
-                                          </span>
+                                        <span style={{ color: "var(--text-secondary)" }}>Role Security:</span>
+                                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: cpuDetails.roleSecurityBonus >= 0 ? "var(--success)" : "var(--danger)" }}>
+                                          {cpuDetails.roleSecurityBonus >= 0 ? "+" : ""}${cpuDetails.roleSecurityBonus.toFixed(2)}
                                         </span>
                                       </div>
 
-                                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
-                                        <span style={{ color: "var(--text-secondary)" }}>4. Randomness (3%):</span>
-                                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>
-                                          {(cpuDetails.randScore * 0.03).toFixed(2)}
-                                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginLeft: "4px" }}>
-                                            (raw: {cpuDetails.randScore.toFixed(1)})
+                                      {/* Upside Bonus */}
+                                      {cpuDetails.upsideBonus > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                          <span style={{ color: "var(--text-secondary)" }}>Upside Bonus:</span>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--success)" }}>
+                                            +${cpuDetails.upsideBonus.toFixed(2)}
                                           </span>
+                                        </div>
+                                      )}
+
+                                      {cpuDetails.urgencyBonus > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                          <span style={{ color: "var(--text-secondary)" }}>Urgency Boost (ADP Slide):</span>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--success)" }}>
+                                            +${cpuDetails.urgencyBonus.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {cpuDetails.savesStrategyBonus !== 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                          <span style={{ color: "var(--text-secondary)" }}>Saves Strategy Boost:</span>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: cpuDetails.savesStrategyBonus > 0 ? "var(--success)" : "var(--danger)" }}>
+                                            {cpuDetails.savesStrategyBonus > 0 ? "+" : ""}${cpuDetails.savesStrategyBonus.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Random Noise */}
+                                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                        <span style={{ color: "var(--text-secondary)" }}>Random Noise (Gaussian):</span>
+                                        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: cpuDetails.randomNoise >= 0 ? "var(--success)" : "var(--danger)" }}>
+                                          {cpuDetails.randomNoise >= 0 ? "+" : ""}${cpuDetails.randomNoise.toFixed(2)}
                                         </span>
                                       </div>
+
+                                      {/* Reach Penalty */}
+                                      {cpuDetails.reachPenalty > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                          <span style={{ color: "var(--text-secondary)" }}>Reach Penalty:</span>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--danger)" }}>
+                                            -${cpuDetails.reachPenalty.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Roster Penalty */}
+                                      {cpuDetails.rosterPenalty > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem" }}>
+                                          <span style={{ color: "var(--text-secondary)" }}>Roster Penalty:</span>
+                                          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--danger)" }}>
+                                            -${cpuDetails.rosterPenalty.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      )}
                                     </div>
 
                                     <div style={{ borderTop: "1px dashed rgba(255,255,255,0.08)", paddingTop: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -637,8 +913,24 @@ export default function PlayerList({
                                         <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: "1rem", color: "var(--secondary)" }}>
                                           {cpuDetails.score.toFixed(2)}
                                         </span>
-                                        <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", textAlign: "right" }}>
-                                          {`0.8*${cpuDetails.adpScore.toFixed(1)} + 0.1*${cpuDetails.projScore.toFixed(1)} + 0.07*${cpuDetails.needScore.toFixed(0)} + 0.03*${cpuDetails.randScore.toFixed(1)}`}
+                                        <span style={{ fontSize: "0.55rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)", textAlign: "right", maxWidth: "240px", wordBreak: "break-all" }}>
+                                          {(() => {
+                                            const parts = [
+                                              `$${cpuDetails.baseValue.toFixed(1)} base`,
+                                              cpuDetails.rosterNeedBonus > 0 ? `+$${cpuDetails.rosterNeedBonus.toFixed(1)} need` : "",
+                                              cpuDetails.categoryNeedBonus > 0 ? `+$${cpuDetails.categoryNeedBonus.toFixed(1)} cat` : "",
+                                              cpuDetails.positionRunBonus > 0 ? `+$${cpuDetails.positionRunBonus.toFixed(1)} run` : "",
+                                              cpuDetails.scarcityBonus > 0 ? `+$${cpuDetails.scarcityBonus.toFixed(1)} scarcity` : "",
+                                              `${cpuDetails.roleSecurityBonus >= 0 ? "+" : ""}$${cpuDetails.roleSecurityBonus.toFixed(1)} role`,
+                                              cpuDetails.upsideBonus > 0 ? `+$${cpuDetails.upsideBonus.toFixed(1)} upside` : "",
+                                              cpuDetails.urgencyBonus > 0 ? `+$${cpuDetails.urgencyBonus.toFixed(1)} urgency` : "",
+                                              cpuDetails.savesStrategyBonus !== 0 ? `${cpuDetails.savesStrategyBonus > 0 ? "+" : ""}$${cpuDetails.savesStrategyBonus.toFixed(1)} saves` : "",
+                                              `${cpuDetails.randomNoise >= 0 ? "+" : ""}$${cpuDetails.randomNoise.toFixed(1)} rand`,
+                                              cpuDetails.reachPenalty > 0 ? `-$${cpuDetails.reachPenalty.toFixed(1)} reach` : "",
+                                              cpuDetails.rosterPenalty > 0 ? `-$${cpuDetails.rosterPenalty.toFixed(1)} roster` : ""
+                                            ].filter(Boolean).join(" ");
+                                            return parts;
+                                          })()}
                                         </span>
                                       </div>
                                     </div>

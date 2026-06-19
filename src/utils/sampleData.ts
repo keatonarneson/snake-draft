@@ -24,6 +24,8 @@ export interface Player {
   minPick: number;
   maxPick: number;
   value: number; // FanGraphs Auction Value ($)
+  consensusValue?: number; // Consensus Projection Value ($) for CPU drafting
+  maxSystemValue?: number; // Maximum value across all loaded systems for upside calculations
   stats: PlayerStats;
   isPitcher: boolean;
 }
@@ -142,6 +144,8 @@ export function getMockPlayers(): Player[] {
   const players: Player[] = basePlayers.map((bp, index) => ({
     ...bp,
     id: `player-${index + 1}`,
+    consensusValue: bp.value,
+    maxSystemValue: bp.value,
   }));
 
   // Fill in the rest up to 350 players programmatically
@@ -183,6 +187,8 @@ export function getMockPlayers(): Player[] {
       minPick: 999, // placeholder, will be reassigned
       maxPick: 999, // placeholder, will be reassigned
       value: parseFloat(currentValue.toFixed(2)),
+      consensusValue: parseFloat(currentValue.toFixed(2)),
+      maxSystemValue: parseFloat(currentValue.toFixed(2)),
       stats,
       isPitcher,
     });

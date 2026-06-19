@@ -85,6 +85,8 @@ export interface DraftPick {
   pickInRound: number;
   teamIndex: number;
   playerDraftedId: string | null;
+  cpuScore?: number;
+  cpuScoreDetails?: any;
 }
 
 export function generateDraftSequence(
@@ -379,7 +381,22 @@ export interface ScarcityInfo {
   remainingCount: number;
   bestPlayerNow?: { name: string; value: number };
   expectedPlayersNext?: ScarcityPlayerInfo[];
+  replacementValue: number;
+  scarcityPressure: number;
+  positionRankPremium: number;
+  expectedBestRankNext: number;
 }
+
+export const POSITION_SLOTS: Record<string, number> = {
+  C: 1.5,
+  "1B": 1.5,
+  "2B": 1.5,
+  "3B": 1.5,
+  SS: 1.5,
+  OF: 6.0,
+  SP: 7.0,
+  RP: 5.0,
+};
 
 /*
  * Helper: Define roster slot configurations to compute total slot counts per position.
@@ -423,11 +440,13 @@ function getTotalSlotsForPosition(pos: string): number {
 }
 
 export function calculatePositionScarcity(
+  allPlayers: Player[],
   availablePlayers: Player[],
   pCurr: number,
   pNext: number,
   positions: string[],
-  rankScarcityCoeff: number = 0.15
+  rankScarcityCoeff: number = 0.12,
+  numTeams: number = 12
 ): Record<string, ScarcityInfo> {
 
   const scarcity: Record<string, ScarcityInfo> = {};
@@ -437,6 +456,19 @@ export function calculatePositionScarcity(
       .filter((p) => p.positions.includes(pos))
       .sort((a, b) => b.value - a.value);
 
+    // Calculate replacement value dynamically based on all league players of this position
+    const allPosPlayers = allPlayers
+      .filter((p) => p.positions.includes(pos))
+      .sort((a, b) => b.value - a.value);
+
+    const slots = POSITION_SLOTS[pos] || 1;
+    const replacementIndex = numTeams * slots;
+    let replacementValue = 0.0;
+    if (allPosPlayers.length > 0) {
+      const idx = Math.min(allPosPlayers.length - 1, replacementIndex);
+      replacementValue = allPosPlayers[idx].value;
+    }
+
     if (posPlayers.length === 0) {
       scarcity[pos] = {
         position: pos,
@@ -444,6 +476,10 @@ export function calculatePositionScarcity(
         expectedBestValueNext: -10,
         dropOff: 0,
         remainingCount: 0,
+        replacementValue,
+        scarcityPressure: 0.5,
+        positionRankPremium: 0,
+        expectedBestRankNext: 0,
       };
       return;
     }
@@ -488,19 +524,29 @@ export function calculatePositionScarcity(
       const fallbackValue = posPlayers[posPlayers.length - 1].value;
       expectedBestValueNext += fallbackValue * probAccum;
       
-      const fallbackRank = posPlayers.length - 1;
+      const fallbackRank = posPlayers.length;
       expectedBestRankNext += fallbackRank * probAccum;
     }
 
     const valueDropOff = Math.max(0, bestValueNow - expectedBestValueNext);
     const rankDropOff = expectedBestRankNext;
 
-    // Scale rank drop-off to dollars using the rankScarcityCoeff
-     // Compute total slots for this position and adjust coefficient dynamically
-  const remainingCount = posPlayers.length;
-  const totalSlots = getTotalSlotsForPosition(pos);
-  const dynamicCoeff = rankScarcityCoeff * (remainingCount / Math.max(1, totalSlots));
-  const dropOff = valueDropOff + rankDropOff * dynamicCoeff;
+    // Remaining demand
+    const draftedCount = allPosPlayers.length - posPlayers.length;
+    const remainingDemand = Math.max(0, (numTeams * slots) - draftedCount);
+
+    // Viable supply remaining
+    const viableSupply = posPlayers.filter((p) => p.value >= replacementValue).length;
+
+    // Scarcity pressure clamped between 0.5 and 2.0
+    const scarcityPressure = Math.min(2.0, Math.max(0.5, remainingDemand / Math.max(1, viableSupply)));
+
+    // Position rank premium capped at $2.00
+    const rankPremiumCap = 2.00;
+    const positionRankPremium = Math.min(rankPremiumCap, rankDropOff * rankScarcityCoeff * scarcityPressure);
+
+    // Combined dropOff for the best player at this position (qualityWeight = 1.0)
+    const dropOff = valueDropOff + positionRankPremium;
 
     scarcity[pos] = {
       position: pos,
@@ -510,16 +556,29 @@ export function calculatePositionScarcity(
       remainingCount: posPlayers.length,
       bestPlayerNow,
       expectedPlayersNext,
+      replacementValue,
+      scarcityPressure,
+      positionRankPremium,
+      expectedBestRankNext,
     };
   });
 
   return scarcity;
 }
 
+export interface ScarcityDetails {
+  valuePreservation: number;
+  scarcityRank: number;
+  qualityWeight: number;
+  scarcityPressure: number;
+  position: string;
+}
+
 export interface Recommendation {
   player: Player;
   pReturn: number;
   scarcityDropOff: number;
+  scarcityDetails?: ScarcityDetails;
   isBench: boolean;
   statsAdjustment: number;
   upsideBonus: number;
@@ -543,7 +602,7 @@ export function getRecommendations(
   pNext: number,
   scarcityMap: Record<string, ScarcityInfo>,
   teamPlayers: Player[] = [],
-  numRounds: number = 23,
+  numRounds: number = 30,
   currentRound: number = 1,
   weightOverrides?: {
     needsMultiplier?: number;
@@ -575,14 +634,14 @@ export function getRecommendations(
   if (currentRound <= 5) {
     phase = "early";
     w_needs = 0.0;       // Pure BPA - focus on foundational players
-    w_scarcity = 0.0;    // No scarcity in early rounds
+    w_scarcity = 0.3;    // Small scarcity buffer in early rounds
     w_reach = 1.5;       // Strict reach penalty to prevent reaching
     w_upside = 0.0;      // No upside bonus early
     d_bench = 0.40;      // Stronger bench discount to ensure players "fit the board" (fill active slots)
   } else if (currentRound >= 15) {
     phase = "late";
     w_needs = 1.5;       // Heavily target category needs and gaps
-    w_scarcity = 0.0;    // Scarcity is irrelevant in late rounds
+    w_scarcity = 0.4;    // Small scarcity buffer in late rounds
     w_reach = 0.0;       // No reach penalty late
     w_upside = 1.8;      // Prioritize high-upside sleepers
     d_bench = 0.90;      // Negligible bench penalty
@@ -634,14 +693,47 @@ export function getRecommendations(
   return availablePlayers.map((player) => {
     const pReturn = calculateReturnProbability(pCurr, pNext, player);
     
-    // Get maximum scarcity drop-off
+    // Calculate player-specific scarcity drop-off using qualityWeight and value preservation
     let scarcityDropOff = 0;
+    let bestScarcityDetails: ScarcityDetails | undefined = undefined;
+
     player.positions.forEach((pos) => {
       const info = scarcityMap[pos];
-      if (info && info.dropOff > scarcityDropOff) {
-        scarcityDropOff = info.dropOff;
+      if (info) {
+        // playerQualityWeight = clamp((v_player - replacementValue) / max(0.01, v_best - replacementValue), 0, 1)
+        const denominator = Math.max(0.01, info.bestValueNow - info.replacementValue);
+        const qualityWeight = Math.min(1.0, Math.max(0.0, (player.value - info.replacementValue) / denominator));
+        
+        // valuePreservationBonus = max(0, v_player - expectedBestValueNext)
+        const valuePreservation = Math.max(0, player.value - info.expectedBestValueNext);
+        
+        // scarcityRankBonus = positionRankPremium * playerQualityWeight
+        const scarcityRank = info.positionRankPremium * qualityWeight;
+        
+        const playerScarcityBonus = valuePreservation + scarcityRank;
+
+        if (playerScarcityBonus > scarcityDropOff) {
+          scarcityDropOff = playerScarcityBonus;
+          bestScarcityDetails = {
+            valuePreservation,
+            scarcityRank,
+            qualityWeight,
+            scarcityPressure: info.scarcityPressure,
+            position: pos
+          };
+        }
       }
     });
+
+    if (!bestScarcityDetails && player.positions.length > 0) {
+      bestScarcityDetails = {
+        valuePreservation: 0,
+        scarcityRank: 0,
+        qualityWeight: 0,
+        scarcityPressure: 0.5,
+        position: player.positions[0]
+      };
+    }
 
     // Check positional fit
     const { isBench } = checkPositionalFit(teamPlayers, player, numRounds);
@@ -677,7 +769,7 @@ export function getRecommendations(
     const baseValue = player.value * w_projections;
     
     // Scarcity premium is scaled by both position scarcity and draft urgency
-    const scarcityPremium = scarcityDropOff * (1.0 - pReturn) * w_scarcity * w_urgency;
+    const scarcityPremium = scarcityDropOff * w_scarcity * w_urgency;
 
     // General draft urgency timing bonus: if a player is close to being drafted (pReturn is low) and has positive value,
     // give them a slight boost when draftUrgency is high.
@@ -695,6 +787,7 @@ export function getRecommendations(
       player,
       pReturn,
       scarcityDropOff,
+      scarcityDetails: bestScarcityDetails,
       isBench,
       statsAdjustment: Math.round(statsAdjustment * 100) / 100,
       upsideBonus: Math.round(upsideBonus * 100) / 100,
@@ -716,15 +809,51 @@ export function getRecommendations(
 
 export interface CpuScoreDetails {
   score: number;
-  adpScore: number;
-  projScore: number;
-  needScore: number;
-  randScore: number;
-  penalty: number;
-  bonus: number;
-  urgency: number;
-  marketVal: number;
+  baseValue: number;
+  adpDollars: number;
+  consensusDollars: number;
+  rosterNeedBonus: number;
+  categoryNeedBonus: number;
+  positionRunBonus: number;
+  scarcityBonus: number;
+  roleSecurityBonus: number;
+  upsideBonus: number;
+  randomNoise: number;
+  reachPenalty: number;
+  rosterPenalty: number;
+  urgencyBonus: number;
+  savesStrategyBonus: number;
   isBench: boolean;
+}
+
+export type CpuArchetype = "balanced" | "market" | "projection" | "need" | "upside";
+
+export function getCpuArchetype(teamIndex: number, userTeamIndex: number): CpuArchetype {
+  if (teamIndex === userTeamIndex) return "balanced";
+  const relativeIndex = teamIndex > userTeamIndex ? teamIndex - 1 : teamIndex;
+  const archetypes: CpuArchetype[] = [
+    "balanced",
+    "market",
+    "projection",
+    "need",
+    "balanced",
+    "market",
+    "need",
+    "upside",
+    "balanced",
+    "market",
+    "projection",
+    "balanced",
+  ];
+  return archetypes[relativeIndex % archetypes.length];
+}
+
+export function randomNormal(mean = 0, stdDev = 1): number {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  const num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  return num * stdDev + mean;
 }
 
 export function calculateAdpValue(adp: number): number {
@@ -737,56 +866,380 @@ export function calculateCpuScore(
   pCurr: number,
   cpuRoster: Player[],
   numRounds: number,
+  cpuArchetype: CpuArchetype,
+  scarcityMap: Record<string, ScarcityInfo>,
+  currentPickIndex: number,
+  picks: DraftPick[],
+  allPlayers: Player[],
+  savesStrategy: string,
   fixedRand?: number
 ): CpuScoreDetails {
-  const marketVal = calculateAdpValue(player.adp);
+  const currentRound = Math.floor((currentPickIndex) / (picks.length / numRounds)) + 1;
 
-  // 1. ADP / Market Timing Score (S_ADP)
-  let penalty = 0;
-  if (player.adp > pCurr + 8) {
-    const reachPicks = player.adp - (pCurr + 8);
-    penalty = Math.min(marketVal, reachPicks * 1.5);
+  // 1. Base Player Value
+  const adpDollars = calculateAdpValue(player.adp);
+  const consensusDollars = player.consensusValue !== undefined ? player.consensusValue : player.value;
+
+  let adpWeight = 0.65;
+  let consensusWeight = 0.35;
+
+  if (currentRound <= 5) {
+    if (cpuArchetype === "market") {
+      adpWeight = 0.85;
+      consensusWeight = 0.15;
+    } else if (cpuArchetype === "projection") {
+      adpWeight = 0.65;
+      consensusWeight = 0.35;
+    } else {
+      adpWeight = 0.75;
+      consensusWeight = 0.25;
+    }
+  } else if (currentRound <= 15) {
+    if (cpuArchetype === "market") {
+      adpWeight = 0.75;
+      consensusWeight = 0.25;
+    } else if (cpuArchetype === "projection") {
+      adpWeight = 0.55;
+      consensusWeight = 0.45;
+    } else {
+      adpWeight = 0.65;
+      consensusWeight = 0.35;
+    }
+  } else {
+    if (cpuArchetype === "market") {
+      adpWeight = 0.65;
+      consensusWeight = 0.35;
+    } else if (cpuArchetype === "projection") {
+      adpWeight = 0.45;
+      consensusWeight = 0.55;
+    } else {
+      adpWeight = 0.55;
+      consensusWeight = 0.45;
+    }
   }
 
-  let bonus = 0;
+  const baseValue = adpWeight * adpDollars + consensusWeight * consensusDollars;
+
+  // 2. Roster Need Bonus
+  const { isBench } = checkPositionalFit(cpuRoster, player, numRounds);
+  let positionNeedScore = 0.25;
+  if (!isBench) {
+    const isCatcher = player.positions.includes("C");
+    const isRP = player.positions.includes("RP");
+    
+    const countC = cpuRoster.filter(p => p.positions.includes("C")).length;
+    const countRP = cpuRoster.filter(p => p.positions.includes("RP")).length;
+
+    if (isCatcher) {
+      if (countC >= 2) {
+        positionNeedScore = 0.0;
+      } else if (countC === 0) {
+        positionNeedScore = currentRound > 15 ? 1.0 : currentRound > 5 ? 0.85 : 0.50;
+      } else {
+        positionNeedScore = currentRound > 20 ? 0.75 : 0.35;
+      }
+    } else if (isRP) {
+      if (countRP >= 4) {
+        positionNeedScore = 0.0;
+      } else if (countRP === 0) {
+        positionNeedScore = currentRound > 12 ? 1.0 : currentRound > 6 ? 0.75 : 0.50;
+      } else {
+        positionNeedScore = currentRound > 15 ? 0.60 : 0.30;
+      }
+    } else {
+      positionNeedScore = currentRound > 15 ? 1.0 : currentRound > 5 ? 0.75 : 0.50;
+    }
+  }
+
+  const needMultiplier = cpuArchetype === "need" ? 1.25 : 1.0;
+  const maxRosterNeed = (currentRound <= 5 ? 0.75 : currentRound <= 15 ? 2.00 : 3.00) * needMultiplier;
+  const rosterNeedBonus = maxRosterNeed * positionNeedScore;
+
+  // 3. Category Need Bonus
+  const needs = calculateCategoryNeeds(cpuRoster, numRounds);
+  const rawStatsAdjustment = calculateStatsAdjustment(player, needs);
+  const catNeedMultiplier = cpuArchetype === "need" ? 1.25 : 1.0;
+  const maxCatBonus = (currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.50 : 2.50) * catNeedMultiplier;
+  const normalizedAdjustment = Math.max(0.0, Math.min(1.0, rawStatsAdjustment / 4.0));
+  const categoryNeedBonus = maxCatBonus * normalizedAdjustment;
+
+  // 4. Position Run Bonus
+  const lastPicks = picks.slice(Math.max(0, currentPickIndex - 12), currentPickIndex);
+  let positionRunBonus = 0;
+  player.positions.forEach(pos => {
+    let runCount = 0;
+    lastPicks.forEach(pick => {
+      if (pick.playerDraftedId) {
+        const dp = allPlayers.find(p => p.id === pick.playerDraftedId);
+        if (dp && dp.positions.includes(pos)) {
+          runCount++;
+        }
+      }
+    });
+
+    let runIntensity = 0;
+    if (pos === "RP") {
+      if (runCount >= 2) {
+        runIntensity = Math.min(1.0, runCount / 4.0);
+      }
+    } else {
+      if (runCount >= 3) {
+        runIntensity = Math.min(1.0, runCount / 6.0);
+      }
+    }
+
+    const countOnRoster = cpuRoster.filter(p => p.positions.includes(pos)).length;
+    const slots = POSITION_SLOTS[pos] || 1;
+    const teamNeed = Math.max(0, 1.0 - (countOnRoster / slots));
+
+    const maxRunBonus = currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.25 : 1.00;
+    const bonusVal = runIntensity * teamNeed * maxRunBonus;
+    if (bonusVal > positionRunBonus) {
+      positionRunBonus = bonusVal;
+    }
+  });
+
+  // 5. Scarcity Bonus
+  let maxPositionScarcity = 0;
+  player.positions.forEach(pos => {
+    const info = scarcityMap[pos];
+    if (info) {
+      if (info.positionRankPremium > maxPositionScarcity) {
+        maxPositionScarcity = info.positionRankPremium;
+      }
+    }
+  });
+
+  const maxScarcityLimit = currentRound <= 5 ? 0.75 : currentRound <= 15 ? 1.50 : 1.50;
+  const scarcityBonus = Math.min(maxScarcityLimit, maxPositionScarcity * (maxScarcityLimit / 2.00));
+
+  // 6. Role / Playing Time Security Bonus
+  let roleScore = 0;
+  if (!player.isPitcher) {
+    const ab = player.stats.AB || 0;
+    if (ab >= 520) roleScore = 1.0;
+    else if (ab >= 400) roleScore = 0.5;
+    else if (ab >= 250) roleScore = -0.5;
+    else roleScore = -1.5;
+  } else {
+    const isSP = player.positions.includes("SP");
+    const isRP = player.positions.includes("RP");
+    if (isSP) {
+      const ip = player.stats.IP || 0;
+      if (ip >= 150) roleScore = 1.0;
+      else if (ip >= 100) roleScore = 0.5;
+      else roleScore = -0.5;
+    } else if (isRP) {
+      const sv = player.stats.SV || 0;
+      if (sv >= 25) roleScore = 1.0;
+      else if (sv >= 10) roleScore = 0.25;
+      else roleScore = -1.0;
+    }
+  }
+
+  const maxRoleBonus = currentRound <= 5 ? 0.75 : currentRound <= 15 ? 1.00 : 2.00;
+  const roleSecurityBonus = roleScore * maxRoleBonus;
+
+  // 7. Upside Bonus
+  const maxSystemValue = player.maxSystemValue !== undefined ? player.maxSystemValue : player.value;
+  const consensusValue = player.consensusValue !== undefined ? player.consensusValue : player.value;
+  const upsideGap = Math.max(0, maxSystemValue - consensusValue);
+  const adpVariance = Math.max(0, player.maxPick - player.adp);
+  const adpVarianceScore = Math.min(1.0, adpVariance / 30.0);
+  const upsideScore = Math.max(Math.min(1.0, upsideGap / 5.0), adpVarianceScore * 0.5);
+
+  const upsideMultiplier = cpuArchetype === "upside" ? 1.40 : 1.0;
+  const phaseUpsideWeight = (currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.25 : 2.50) * upsideMultiplier;
+  const upsideBonus = phaseUpsideWeight * upsideScore;
+
+  // 8. Random Noise
+  let randStdDev = currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.00 : 1.75;
+  let randClamp = currentRound <= 5 ? 1.00 : currentRound <= 15 ? 1.75 : 3.00;
+
+  if (cpuArchetype === "market") {
+    randStdDev *= 0.5;
+    randClamp *= 0.5;
+  } else if (cpuArchetype === "upside") {
+    randStdDev *= 1.20;
+    randClamp *= 1.20;
+  } else if (cpuArchetype === "need") {
+    randStdDev *= 0.90;
+    randClamp *= 0.90;
+  }
+
+  const rawNoise = fixedRand !== undefined 
+    ? (fixedRand - 0.5) * 2.0 * randStdDev
+    : randomNormal(0, randStdDev);
+
+  const randomNoise = Math.min(randClamp, Math.max(-randClamp, rawNoise));
+
+  // 9. Reach Penalty
+  let reachPenalty = 0;
+  if (player.adp > pCurr) {
+    const reachPicks = player.adp - pCurr;
+    if (currentRound <= 5) {
+      if (reachPicks > 6) {
+        reachPenalty = (reachPicks - 6) * 1.5;
+      }
+    } else if (currentRound <= 15) {
+      if (reachPicks > 15) {
+        reachPenalty = (reachPicks - 15) * 0.8;
+      }
+    } else {
+      if (reachPicks > 30) {
+        reachPenalty = (reachPicks - 30) * 0.3;
+      }
+    }
+  }
+
+  // 10. Roster Penalty
+  let rosterPenalty = 0;
+  const isCatcher = player.positions.includes("C");
+  const isRP = player.positions.includes("RP");
+  const isPitcher = player.isPitcher;
+
+  const countC = cpuRoster.filter(p => p.positions.includes("C")).length;
+  const countRP = cpuRoster.filter(p => p.positions.includes("RP")).length;
+  const countPitchers = cpuRoster.filter(p => p.isPitcher).length;
+  const countBatters = cpuRoster.filter(p => !p.isPitcher).length;
+
+  if (isCatcher && countC >= 1) {
+    rosterPenalty += currentRound <= 20 ? 15.0 : 5.0;
+  }
+
+  if (isRP && countRP >= 2 && currentRound <= 15) {
+    rosterPenalty += 10.0;
+  }
+
+  if (!isPitcher && countBatters >= 11 && countPitchers <= 4 && currentRound <= 18) {
+    rosterPenalty += 8.0;
+  }
+
+  const countOF = cpuRoster.filter(p => p.positions.includes("OF")).length;
+  if (player.positions.includes("OF") && countOF >= 6) {
+    rosterPenalty += 5.0;
+  }
+
+  // 11. Urgency Bonus (ADP Slide & maxPick Urgency)
+  let urgencyBonus = 0;
   if (pCurr > player.adp) {
     const slidePicks = pCurr - player.adp;
-    bonus = Math.min(10.0, slidePicks * 0.5);
+    urgencyBonus += Math.min(4.0, slidePicks * 0.20);
   }
-
-  let urgency = 0;
   if (pCurr >= player.maxPick) {
-    urgency = 10.0 + (pCurr - player.maxPick) * 1.5;
-  } else if (player.maxPick > player.adp) {
-    const fractionToMax = (pCurr - player.adp) / (player.maxPick - player.adp);
-    urgency = Math.max(0.0, fractionToMax * 10.0);
+    urgencyBonus += 6.0;
+  } else if (player.maxPick - pCurr <= 10) {
+    const picksToMax = player.maxPick - pCurr;
+    urgencyBonus += (11 - picksToMax) * 0.5;
   }
 
-  const adpScore = Math.max(0.0, marketVal - penalty + bonus + urgency);
+  // 12. Saves Strategy Adjustment (for RPs)
+  let savesStrategyBonus = 0;
+  if (player.positions.includes("RP")) {
+    if (savesStrategy === "aggressive" && currentRound <= 12) {
+      savesStrategyBonus = 6.0;
+    } else if (savesStrategy === "wait" && currentRound <= 10) {
+      savesStrategyBonus = -6.0;
+    }
+  }
 
-  // 2. Projection Value Score (S_Proj)
-  const projScore = player.value;
-
-  // 3. Roster Need Score (S_Need)
-  const { isBench } = checkPositionalFit(cpuRoster, player, numRounds);
-  const needScore = isBench ? 2.0 : 30.0;
-
-  // 4. Randomness Score (S_Rand)
-  const randScore = fixedRand !== undefined ? fixedRand * 30.0 : Math.random() * 30.0;
-
-  // 5. Combined CPU Score: 80% ADP, 10% Proj, 7% Need, 3% Rand
-  const score = 0.80 * adpScore + 0.10 * projScore + 0.07 * needScore + 0.03 * randScore;
+  const score = 
+    baseValue 
+    + rosterNeedBonus 
+    + categoryNeedBonus 
+    + positionRunBonus 
+    + scarcityBonus 
+    + roleSecurityBonus 
+    + upsideBonus 
+    + randomNoise 
+    + urgencyBonus
+    + savesStrategyBonus
+    - reachPenalty 
+    - rosterPenalty;
 
   return {
     score: Math.round(score * 100) / 100,
-    adpScore: Math.round(adpScore * 100) / 100,
-    projScore: Math.round(projScore * 100) / 100,
-    needScore: Math.round(needScore * 100) / 100,
-    randScore: Math.round(randScore * 100) / 100,
-    penalty: Math.round(penalty * 100) / 100,
-    bonus: Math.round(bonus * 100) / 100,
-    urgency: Math.round(urgency * 100) / 100,
-    marketVal,
+    baseValue: Math.round(baseValue * 100) / 100,
+    adpDollars: Math.round(adpDollars * 100) / 100,
+    consensusDollars: Math.round(consensusDollars * 100) / 100,
+    rosterNeedBonus: Math.round(rosterNeedBonus * 100) / 100,
+    categoryNeedBonus: Math.round(categoryNeedBonus * 100) / 100,
+    positionRunBonus: Math.round(positionRunBonus * 100) / 100,
+    scarcityBonus: Math.round(scarcityBonus * 100) / 100,
+    roleSecurityBonus: Math.round(roleSecurityBonus * 100) / 100,
+    upsideBonus: Math.round(upsideBonus * 100) / 100,
+    randomNoise: Math.round(randomNoise * 100) / 100,
+    reachPenalty: Math.round(reachPenalty * 100) / 100,
+    rosterPenalty: Math.round(rosterPenalty * 100) / 100,
+    urgencyBonus: Math.round(urgencyBonus * 100) / 100,
+    savesStrategyBonus: Math.round(savesStrategyBonus * 100) / 100,
     isBench
+  };
+}
+
+export interface TargetMetrics {
+  optimalRound: number;
+  optimalOverallPick: number;
+  survivalProbabilities: { round: number; overallPick: number; probability: number }[];
+  status: "drafted" | "gone" | "urgent" | "safe";
+}
+
+export function calculateTargetMetrics(
+  player: Player,
+  pCurr: number,
+  userPicks: DraftPick[],
+  draftedPlayerIds: Set<string>
+): TargetMetrics {
+  const isDrafted = draftedPlayerIds.has(player.id);
+
+  const survivalProbabilities = userPicks
+    .filter((up) => up.overallPick >= pCurr)
+    .map((up) => {
+      const probability = calculateReturnProbability(pCurr, up.overallPick, player);
+      return {
+        round: up.round,
+        overallPick: up.overallPick,
+        probability,
+      };
+    });
+
+  let optimalIdx = -1;
+  for (let i = 0; i < survivalProbabilities.length; i++) {
+    if (survivalProbabilities[i].probability >= 0.35) {
+      optimalIdx = i;
+    } else {
+      break;
+    }
+  }
+
+  if (optimalIdx === -1 && survivalProbabilities.length > 0) {
+    optimalIdx = 0;
+  }
+
+  const optimalPick = survivalProbabilities[optimalIdx];
+  const optimalRound = optimalPick ? optimalPick.round : -1;
+  const optimalOverallPick = optimalPick ? optimalPick.overallPick : -1;
+
+  let status: "drafted" | "gone" | "urgent" | "safe" = "safe";
+  if (isDrafted) {
+    status = "drafted";
+  } else if (survivalProbabilities.length === 0) {
+    status = "gone";
+  } else {
+    const nextPickProb = survivalProbabilities[0]?.probability || 0;
+    if (nextPickProb < 0.20) {
+      status = "gone";
+    } else if (nextPickProb < 0.45) {
+      status = "urgent";
+    } else {
+      status = "safe";
+    }
+  }
+
+  return {
+    optimalRound,
+    optimalOverallPick,
+    survivalProbabilities,
+    status,
   };
 }
