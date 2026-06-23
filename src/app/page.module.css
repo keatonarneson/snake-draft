@@ -108,18 +108,21 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
 }
 
 .mainSection {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
 }
 
 .rosterSidebar {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
 }
 
 /* Card layout */
@@ -454,6 +457,84 @@
 }
 
 /* Recommendations */
+.recFocusToolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.recFocusTabs {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(70px, 1fr));
+  padding: 3px;
+  border: 1px solid var(--border-muted);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.recFocusTab {
+  border: 0;
+  border-radius: 5px;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recFocusTab[data-active="true"] {
+  background: var(--primary);
+  color: #fff;
+}
+
+.recFocusMenus {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recFocusMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.recFocusMenu select {
+  min-width: 104px;
+  border: 1px solid var(--border-muted);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  text-transform: none;
+}
+
+.recFocusSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  border-left: 3px solid var(--primary);
+  background: rgba(99, 102, 241, 0.05);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.recFocusSummary span:first-child {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
 .recList {
   display: flex;
   flex-direction: column;
@@ -477,11 +558,22 @@
   transform: translateX(2px);
 }
 
+.recItem[data-decision="wait"] {
+  border-color: rgba(245, 158, 11, 0.18);
+  background: rgba(245, 158, 11, 0.025);
+}
+
+.recItem[data-decision="draft"] {
+  border-color: rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.035);
+}
+
 .recItemLeft {
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
+  flex: 1;
 }
 
 .recRank {
@@ -503,6 +595,13 @@
   min-width: 0;
 }
 
+.recNameRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
 .recName {
   font-weight: 600;
   font-size: 0.9rem;
@@ -514,6 +613,36 @@
 .recSub {
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+.recDecision {
+  flex: none;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.recDecision[data-decision="draft"] {
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.recDecision[data-decision="consider"] {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.recDecision[data-decision="wait"] {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.recDecisionReason {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
 }
 
 .recItemRight {
@@ -540,6 +669,40 @@
   font-weight: 700;
 }
 
+.recScoreDetail {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
+.recAlternatives {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.recAlternativesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.recAlternativesHeader button {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .recReturnGlow {
   padding: 2px 6px;
   border-radius: 4px;
@@ -561,7 +724,72 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
+@media (max-width: 720px) {
+  .recFocusToolbar,
+  .recFocusSummary,
+  .recItem {
+    align-items: stretch;
+  }
+
+  .recFocusTabs,
+  .recFocusMenus {
+    width: 100%;
+  }
+
+  .recFocusMenu {
+    flex: 1;
+  }
+
+  .recFocusMenu select {
+    width: 100%;
+  }
+
+  .recFocusSummary,
+  .recItem {
+    flex-direction: column;
+  }
+
+  .recItemRight {
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .recMetric {
+    align-items: flex-start;
+  }
+}
+
 /* Draft Board Pick Sequence (Compact Sidebar) */
+.draftTrackerHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.draftTrackerActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.draftTrackerActionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.draftTrackerStatus {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  text-align: center;
+}
+
 .draftSeqList {
   display: flex;
   flex-direction: column;

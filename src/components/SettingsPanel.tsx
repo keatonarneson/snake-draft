@@ -8,6 +8,7 @@ interface SettingsPanelProps {
   userPosition: number;
   numRounds: number;
   simSpeed: "manual" | "paced" | "instant";
+  cpuProfileMode: "fixed" | "random";
   isDraftStarted: boolean;
   projectionSystem: "oopsy" | "thebat" | "steamer" | "mock";
   onProjectionSystemChange: (system: "oopsy" | "thebat" | "steamer" | "mock") => void;
@@ -16,6 +17,7 @@ interface SettingsPanelProps {
     userPosition?: number;
     numRounds?: number;
     simSpeed?: "manual" | "paced" | "instant";
+    cpuProfileMode?: "fixed" | "random";
   }) => void;
   onReset: () => void;
   onAutoPick: () => void;
@@ -75,6 +77,7 @@ export default function SettingsPanel({
   userPosition,
   numRounds,
   simSpeed,
+  cpuProfileMode,
   isDraftStarted,
   projectionSystem,
   onProjectionSystemChange,
@@ -246,6 +249,41 @@ export default function SettingsPanel({
               />
               Manual CPU Drafting
             </label>
+          </div>
+        </div>
+
+        {/* CPU Profile Assignment */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
+            CPU Profile Assignment
+          </label>
+          <div style={{ display: "flex", background: "rgba(0,0,0,0.15)", padding: "2px", borderRadius: "6px", border: "1px solid var(--glass-border)" }}>
+            {([
+              { id: "fixed", label: "Fixed" },
+              { id: "random", label: "Randomized" },
+            ] as const).map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                disabled={isDraftStarted}
+                onClick={() => onConfigChange({ cpuProfileMode: mode.id })}
+                style={{
+                  flex: 1,
+                  padding: "7px 8px",
+                  fontSize: "0.75rem",
+                  borderRadius: "4px",
+                  border: "none",
+                  background: cpuProfileMode === mode.id ? "var(--primary)" : "transparent",
+                  color: cpuProfileMode === mode.id ? "var(--text-primary)" : "var(--text-secondary)",
+                  cursor: isDraftStarted ? "not-allowed" : "pointer",
+                  fontWeight: cpuProfileMode === mode.id ? 700 : 500,
+                  opacity: isDraftStarted ? 0.55 : 1,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {mode.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -761,16 +799,16 @@ export default function SettingsPanel({
                 className="btn btn-secondary"
                 onClick={() =>
                   onTargetsChange({
-                    R: 1166,
-                    HR: 326,
-                    RBI: 1120,
-                    SB: 171,
-                    AVG: 0.262,
-                    W: 112,
-                    SV: 90,
-                    SO: 1725,
-                    ERA: 3.75,
-                    WHIP: 1.18,
+                    R: 1125,
+                    HR: 315,
+                    RBI: 1103,
+                    SB: 190,
+                    AVG: 0.263,
+                    W: 93,
+                    SV: 88,
+                    SO: 1275,
+                    ERA: 3.65,
+                    WHIP: 1.20,
                   })
                 }
                 style={{

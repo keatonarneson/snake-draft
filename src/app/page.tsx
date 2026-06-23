@@ -8,16 +8,24 @@ import {
   calculatePositionScarcity,
   getRecommendations,
   DraftPick,
+  CpuScoreDetails,
+  CpuProfile,
   calculateCpuScore,
   calculateAdpValue,
   calculateTargetMetrics,
   getCpuArchetype,
+  getCpuProfile,
+  getCpuProfileTemplates,
+  getCpuCloserPlan,
+  isDraftableCloser,
+  isPremiumCloser,
 } from "../utils/draftEngine";
 import SettingsPanel from "../components/SettingsPanel";
 import DraftBoard from "../components/DraftBoard";
 import PlayerList from "../components/PlayerList";
 import RosterTracker from "../components/RosterTracker";
 import DashboardSummary from "../components/DashboardSummary";
+import StandingsView from "../components/StandingsView";
 
 interface SandboxPreset {
   trustProjections: number;
@@ -30,6 +38,8 @@ interface SandboxPreset {
   savesStrategy: "wait" | "balanced" | "aggressive";
   rankScarcityCoeff: number;
 }
+
+type CpuProfileMode = "fixed" | "random";
 
 const PRESETS: Record<string, SandboxPreset> = {
   balanced: {
@@ -108,6 +118,7 @@ export default function Home() {
   const [userPosition, setUserPosition] = useState(5); // 1-indexed draft slot
   const [numRounds, setNumRounds] = useState(30);
   const [simSpeed, setSimSpeed] = useState<"manual" | "paced" | "instant">("paced");
+  const [cpuProfileMode, setCpuProfileMode] = useState<CpuProfileMode>("fixed");
   
   // Sandbox Algorithmic Weights (Simplified Knobs)
   const [trustProjections, setTrustProjections] = useState(1.0);
@@ -124,16 +135,16 @@ export default function Home() {
   
   // Custom Target Benchmarks
   const [targets, setTargets] = useState({
-    R: 1166,
-    HR: 326,
-    RBI: 1120,
-    SB: 171,
-    AVG: 0.262,
-    W: 112,
-    SV: 90,
-    SO: 1725,
-    ERA: 3.75,
-    WHIP: 1.18,
+    R: 1125,
+    HR: 315,
+    RBI: 1103,
+    SB: 190,
+    AVG: 0.263,
+    W: 93,
+    SV: 88,
+    SO: 1275,
+    ERA: 3.65,
+    WHIP: 1.20,
   });
   
   const [players, setPlayers] = useState<Player[]>([]);
@@ -149,6 +160,7 @@ export default function Home() {
   const [currentPickIndex, setCurrentPickIndex] = useState(0);
   const [isDraftStarted, setIsDraftStarted] = useState(false);
   const [cpuSavesStrategies, setCpuSavesStrategies] = useState<string[]>([]);
+  const [cpuProfiles, setCpuProfiles] = useState<CpuProfile[]>([]);
   const [roundTargets, setRoundTargets] = useState<Record<number, { position: string | null; playerIds: string[] }>>({});
   
   // Track which team's roster is currently selected in the sidebar
@@ -260,6 +272,19 @@ export default function Home() {
   // ----------------------------------------------------
   // Initialize or Reset Draft
   // ----------------------------------------------------
+  const assignCpuProfiles = useCallback((teamsCount: number, userPos: number) => {
+    const userTeamIndex = userPos - 1;
+    const templates = getCpuProfileTemplates();
+
+    return Array.from({ length: teamsCount }, (_, i) => {
+      if (i === userTeamIndex) return getCpuProfile(i, userTeamIndex);
+      if (cpuProfileMode === "random") {
+        return templates[Math.floor(Math.random() * templates.length)] || getCpuProfile(i, userTeamIndex);
+      }
+      return getCpuProfile(i, userTeamIndex);
+    });
+  }, [cpuProfileMode]);
+
   const initDraft = useCallback((teamsCount: number, roundsCount: number, userPos: number) => {
     const pool = loadedPlayers.length > 0 ? loadedPlayers : getMockPlayers();
     setPlayers(pool);
@@ -269,14 +294,10 @@ export default function Home() {
     setRosterViewTeamIndex(userPos - 1);
     setRoundTargets({});
 
-    // Randomly assign CPU saves strategies (aggressive, balanced, wait)
-    const strategies = Array.from({ length: teamsCount }, (_, i) => {
-      if (i === userPos - 1) return "balanced"; // user strategy
-      const rand = Math.random();
-      return rand < 0.25 ? "aggressive" : rand < 0.55 ? "wait" : "balanced";
-    });
-    setCpuSavesStrategies(strategies);
-  }, [loadedPlayers]);
+    const profiles = assignCpuProfiles(teamsCount, userPos);
+    setCpuProfiles(profiles);
+    setCpuSavesStrategies(profiles.map((profile) => profile.savesStrategy));
+  }, [loadedPlayers, assignCpuProfiles]);
 
   // Load all CSV datasets once on mount to enable consensus calculations and fast switching
   useEffect(() => {
@@ -521,39 +542,50 @@ export default function Home() {
   // ----------------------------------------------------
   // Draft Actions
   // ----------------------------------------------------
-  const draftPlayer = useCallback((playerId: string, cpuScore?: number, cpuScoreDetails?: any) => {
-    if (currentPickIndex >= picks.length) return;
-
+  const calculatePickScoreDetails = useCallback((playerId: string, pickIndex: number, cpuScore?: number, cpuScoreDetails?: CpuScoreDetails) => {
     let finalCpuScore = cpuScore;
     let finalCpuScoreDetails = cpuScoreDetails;
+    const pick = picks[pickIndex];
 
-    if (finalCpuScore === undefined) {
-      // Calculate score for the user pick (or if not provided)
+    if (finalCpuScore === undefined && pick) {
       const playerObj = players.find(p => p.id === playerId);
       if (playerObj) {
-        const teamIndex = currentPick.teamIndex;
-        const cpuRoster = draftedPlayersDetails
-          .filter((d) => d.teamIndex === teamIndex)
-          .map((r) => r.player);
+        const teamIndex = pick.teamIndex;
+        const playerMap = new Map(players.map((p) => [p.id, p]));
+        const priorRoster = picks
+          .slice(0, pickIndex)
+          .filter((draftPick) => draftPick.teamIndex === teamIndex && draftPick.playerDraftedId)
+          .map((draftPick) => playerMap.get(draftPick.playerDraftedId as string))
+          .filter((player): player is Player => Boolean(player));
         const cpuArchetype = getCpuArchetype(teamIndex, userPosition - 1);
-        const strategy = cpuSavesStrategies[teamIndex] || "balanced";
+        const cpuProfile = cpuProfiles[teamIndex] || getCpuProfile(teamIndex, userPosition - 1);
+        const strategy = cpuProfile.savesStrategy || cpuSavesStrategies[teamIndex] || "balanced";
         const details = calculateCpuScore(
           playerObj,
-          currentPick.overallPick,
-          cpuRoster,
+          pick.overallPick,
+          priorRoster,
           numRounds,
           cpuArchetype,
           positionScarcity,
-          currentPickIndex,
+          pickIndex,
           picks,
           players,
           strategy,
-          0.0 // no random noise for static user pick logs
+          0.0, // no random noise for manual/edit pick logs
+          cpuProfile
         );
         finalCpuScore = details.score;
         finalCpuScoreDetails = details;
       }
     }
+
+    return { finalCpuScore, finalCpuScoreDetails };
+  }, [picks, players, userPosition, cpuSavesStrategies, cpuProfiles, numRounds, positionScarcity]);
+
+  const draftPlayer = useCallback((playerId: string, cpuScore?: number, cpuScoreDetails?: CpuScoreDetails) => {
+    if (currentPickIndex >= picks.length) return;
+
+    const { finalCpuScore, finalCpuScoreDetails } = calculatePickScoreDetails(playerId, currentPickIndex, cpuScore, cpuScoreDetails);
 
     setPicks((prevPicks) => {
       const copy = [...prevPicks];
@@ -567,7 +599,56 @@ export default function Home() {
     });
 
     setCurrentPickIndex((prev) => prev + 1);
-  }, [currentPickIndex, picks.length, players, currentPick, draftedPlayersDetails, userPosition, numRounds, positionScarcity, picks, cpuSavesStrategies]);
+  }, [currentPickIndex, picks.length, calculatePickScoreDetails]);
+
+  const setPickPlayer = useCallback((pickIndex: number, playerId: string) => {
+    if (pickIndex < 0 || pickIndex >= picks.length) return;
+
+    const { finalCpuScore, finalCpuScoreDetails } = calculatePickScoreDetails(playerId, pickIndex);
+    const nextPicks = picks.map((pick, index) => {
+      if (index === pickIndex) {
+        return {
+          ...pick,
+          playerDraftedId: playerId,
+          cpuScore: finalCpuScore,
+          cpuScoreDetails: finalCpuScoreDetails,
+        };
+      }
+
+      if (pick.playerDraftedId === playerId) {
+        return {
+          ...pick,
+          playerDraftedId: null,
+          cpuScore: undefined,
+          cpuScoreDetails: undefined,
+        };
+      }
+
+      return pick;
+    });
+
+    const firstEmptyIndex = nextPicks.findIndex((pick) => !pick.playerDraftedId);
+    setPicks(nextPicks);
+    setCurrentPickIndex(firstEmptyIndex === -1 ? nextPicks.length : firstEmptyIndex);
+  }, [picks, calculatePickScoreDetails]);
+
+  const undoLastPick = useCallback(() => {
+    if (currentPickIndex <= 0) return;
+
+    const lastPickIndex = currentPickIndex - 1;
+    setPicks((prevPicks) => {
+      const copy = [...prevPicks];
+      copy[lastPickIndex] = {
+        ...copy[lastPickIndex],
+        playerDraftedId: null,
+        cpuScore: undefined,
+        cpuScoreDetails: undefined,
+      };
+      return copy;
+    });
+    setCurrentPickIndex(lastPickIndex);
+    setSimSpeed("manual");
+  }, [currentPickIndex]);
 
   // ----------------------------------------------------
   // CPU Drafting Logic
@@ -578,8 +659,9 @@ export default function Home() {
     const cpuTeamIndex = currentPick.teamIndex;
     if (cpuTeamIndex === userPosition - 1) return; // Wait for user
 
-    const cpuArchetype = getCpuArchetype(cpuTeamIndex, userPosition - 1);
-    const strategy = cpuSavesStrategies[cpuTeamIndex] || "balanced";
+    const cpuProfile = cpuProfiles[cpuTeamIndex] || getCpuProfile(cpuTeamIndex, userPosition - 1);
+    const cpuArchetype = cpuProfile.archetype;
+    const strategy = cpuProfile.savesStrategy || cpuSavesStrategies[cpuTeamIndex] || "balanced";
 
     // 1. Check constraints on CPU roster (ensure valid distribution of hitters/pitchers)
     const cpuRoster = draftedPlayersDetails.filter((d) => d.teamIndex === cpuTeamIndex);
@@ -605,13 +687,24 @@ export default function Home() {
       candidates = candidates.filter((p) => p.isPitcher);
     }
 
+    const closerPlan = getCpuCloserPlan(cpuProfile, strategy);
+    const rosterPlayers = cpuRoster.map((rosterSpot) => rosterSpot.player);
+    const draftedClosers = rosterPlayers.filter(isDraftableCloser);
+    const draftedPremiumClosers = rosterPlayers.filter(isPremiumCloser);
+    const hasSolvedSavesEarly = draftedPremiumClosers.length >= 2;
+    const shouldBlockClosers = draftedClosers.length >= closerPlan.max || hasSolvedSavesEarly;
+
+    if (shouldBlockClosers) {
+      candidates = candidates.filter((p) => !isDraftableCloser(p));
+    }
+
     if (candidates.length === 0) {
       candidates = availablePlayers; // fallback
     }
 
     // 3. Score candidates by CPU score using the new weighted decision model
     const pCurr = currentPick.overallPick;
-    const cpuRosterPlayers = cpuRoster.map(r => r.player);
+    const cpuRosterPlayers = rosterPlayers;
 
     const candidateScores = candidates.map((player) => {
       const randSeed = Math.random();
@@ -626,7 +719,8 @@ export default function Home() {
         picks,
         players,
         strategy,
-        randSeed
+        randSeed,
+        cpuProfile
       );
       return { player, score: details.score, details };
     });
@@ -671,7 +765,7 @@ export default function Home() {
     if (chosenPlayer) {
       draftPlayer(chosenPlayer.id, chosenCandidate.score, chosenCandidate.details);
     }
-  }, [currentPickIndex, picks.length, currentPick, userPosition, draftedPlayersDetails, numRounds, availablePlayers, draftPlayer, positionScarcity, players, cpuSavesStrategies]);
+  }, [currentPickIndex, picks.length, currentPick, userPosition, draftedPlayersDetails, numRounds, availablePlayers, draftPlayer, positionScarcity, players, cpuSavesStrategies, cpuProfiles]);
 
   // Effect to drive CPU picks
   useEffect(() => {
@@ -701,6 +795,7 @@ export default function Home() {
     userPosition?: number;
     numRounds?: number;
     simSpeed?: "manual" | "paced" | "instant";
+    cpuProfileMode?: CpuProfileMode;
   }) => {
     if (newConfig.numTeams !== undefined) setNumTeams(newConfig.numTeams);
     if (newConfig.userPosition !== undefined) {
@@ -709,6 +804,7 @@ export default function Home() {
     }
     if (newConfig.numRounds !== undefined) setNumRounds(newConfig.numRounds);
     if (newConfig.simSpeed !== undefined) setSimSpeed(newConfig.simSpeed);
+    if (newConfig.cpuProfileMode !== undefined) setCpuProfileMode(newConfig.cpuProfileMode);
   };
 
   const checkAndSetActivePreset = (
@@ -892,6 +988,7 @@ export default function Home() {
             userPosition={userPosition}
             numRounds={numRounds}
             simSpeed={simSpeed}
+            cpuProfileMode={cpuProfileMode}
             isDraftStarted={isDraftStarted}
             onConfigChange={handleConfigChange}
             onReset={handleReset}
@@ -921,6 +1018,9 @@ export default function Home() {
             userTeamIndex={userPosition - 1}
             players={players}
             cpuSavesStrategies={cpuSavesStrategies}
+            cpuProfiles={cpuProfiles}
+            onUndoLastPick={undoLastPick}
+            onEditPick={setPickPlayer}
           />
         </section>
 
@@ -941,6 +1041,12 @@ export default function Home() {
             currentPickIndex={currentPickIndex}
             allPlayers={players}
           />
+          <StandingsView
+            teamNames={teamNames}
+            userTeamIndex={userPosition - 1}
+            draftedPlayers={draftedPlayersDetails}
+            numRounds={numRounds}
+          />
           <PlayerList
             availablePlayers={availablePlayers}
             draftedPlayers={draftedPlayersDetails}
@@ -958,6 +1064,7 @@ export default function Home() {
             picks={picks}
             userTeamIndex={userPosition - 1}
             cpuSavesStrategies={cpuSavesStrategies}
+            cpuProfiles={cpuProfiles}
           />
         </section>
 

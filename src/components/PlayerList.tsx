@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import styles from "../app/page.module.css";
 import { Player } from "../utils/sampleData";
-import { Recommendation, calculateAdpValue, calculateCpuScore, calculateTargetMetrics, DraftPick, ScarcityInfo, getCpuArchetype } from "../utils/draftEngine";
+import { Recommendation, calculateAdpValue, calculateCpuScore, calculateTargetMetrics, DraftPick, ScarcityInfo, CpuProfile, getCpuArchetype, getCpuProfile } from "../utils/draftEngine";
 
 interface PlayerListProps {
   availablePlayers: Player[];
@@ -23,6 +23,7 @@ interface PlayerListProps {
   userTeamIndex?: number;
   scarcityMap?: Record<string, ScarcityInfo>;
   cpuSavesStrategies?: string[];
+  cpuProfiles?: CpuProfile[];
 }
 
 type SortField = "value" | "adp" | "pReturn" | "name" | "score";
@@ -46,6 +47,7 @@ export default function PlayerList({
   userTeamIndex = 0,
   scarcityMap = {},
   cpuSavesStrategies = [],
+  cpuProfiles = [],
 }: PlayerListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPosition, setSelectedPosition] = useState("ALL");
@@ -520,8 +522,9 @@ export default function PlayerList({
                             const cpuRoster = draftedPlayers
                               .filter((d) => d.teamIndex === currentTeamIndex)
                               .map((d) => d.player);
-                            const cpuArchetype = getCpuArchetype(currentTeamIndex, userTeamIndex);
-                            const strategy = cpuSavesStrategies[currentTeamIndex] || "balanced";
+                            const cpuProfile = cpuProfiles[currentTeamIndex] || getCpuProfile(currentTeamIndex, userTeamIndex);
+                            const cpuArchetype = cpuProfile.archetype || getCpuArchetype(currentTeamIndex, userTeamIndex);
+                            const strategy = cpuProfile.savesStrategy || cpuSavesStrategies[currentTeamIndex] || "balanced";
                             const allPlayers = [...availablePlayers, ...draftedPlayers.map(d => d.player)];
                             cpuDetails = calculateCpuScore(
                               player,
@@ -534,7 +537,8 @@ export default function PlayerList({
                               picks,
                               allPlayers,
                               strategy,
-                              0.5
+                              0.5,
+                              cpuProfile
                             );
                           }
 
@@ -778,7 +782,7 @@ export default function PlayerList({
                                   <div style={{ background: "rgba(0,0,0,0.15)", padding: "12px", borderRadius: "8px", display: "flex", flexDirection: "column", gap: "10px" }}>
                                     <div style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--text-secondary)", borderBottom: "1px dashed rgba(255,255,255,0.08)", paddingBottom: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                       <span className="badge badge-accent" style={{ fontSize: "0.55rem", padding: "1px 6px" }}>
-                                        {getCpuArchetype(currentTeamIndex, userTeamIndex).toUpperCase()} CPU
+                                        {(cpuProfiles[currentTeamIndex]?.label || getCpuArchetype(currentTeamIndex, userTeamIndex)).toUpperCase()} CPU
                                       </span>
                                       <span className="badge badge-primary" style={{ fontSize: "0.6rem", padding: "1px 6px" }}>{currentTeamName}</span>
                                     </div>

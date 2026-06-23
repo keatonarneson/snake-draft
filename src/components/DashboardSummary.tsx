@@ -1,9 +1,22 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import styles from "../app/page.module.css";
 import { Recommendation, ScarcityInfo, calculateTargetMetrics, DraftPick } from "../utils/draftEngine";
 import { Player } from "../utils/sampleData";
+
+type RecommendationFocus =
+  | "all"
+  | "hitters"
+  | "pitchers"
+  | `position:${string}`
+  | `category:${string}`;
+
+type RecommendationDecision = "draft" | "consider" | "wait";
+
+const POSITION_FOCUSES = ["C", "1B", "2B", "3B", "SS", "OF", "SP", "RP"];
+const HITTING_CATEGORY_FOCUSES = ["R", "HR", "RBI", "SB", "AVG"];
+const PITCHING_CATEGORY_FOCUSES = ["W", "SV", "SO", "ERA", "WHIP"];
 
 interface DashboardSummaryProps {
   recommendations: Recommendation[];
@@ -36,18 +49,133 @@ export default function DashboardSummary({
   currentPickIndex = 0,
   allPlayers = [],
 }: DashboardSummaryProps) {
-  // Sort recommendations by score descending and get top 4
-  const topRecommendations = useMemo(() => {
-    return recommendations
-      .filter((r) => r.pReturn < 1.0) // only players who aren't guaranteed to return (i.e. exclude players we can definitely get later if they aren't the best value)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 4);
-  }, [recommendations]);
+  const [recommendationFocus, setRecommendationFocus] = useState<RecommendationFocus>("all");
 
-  // If no recommendations (e.g. draft finished), fallback to all available
-  const displayRecs = topRecommendations.length > 0 
-    ? topRecommendations 
-    : recommendations.sort((a, b) => b.score - a.score).slice(0, 4);
+  const sortedRecommendations = useMemo(
+    () => [...recommendations].sort((a, b) => b.score - a.score),
+    [recommendations]
+  );
+
+  const displayRecs = useMemo(() => {
+    const urgent = sortedRecommendations.filter((recommendation) => recommendation.pReturn < 1.0);
+    const urgentIds = new Set(urgent.map((recommendation) => recommendation.player.id));
+    const likelyToReturn = sortedRecommendations.filter((recommendation) => !urgentIds.has(recommendation.player.id));
+
+    return [...urgent, ...likelyToReturn].slice(0, 4);
+  }, [sortedRecommendations]);
+
+  const categoryContribution = (player: Player, category: string) => {
+    const stats = player.stats;
+
+    switch (category) {
+      case "AVG":
+        return ((stats.AVG || 0) - 0.260) * (stats.AB || 500);
+      case "ERA":
+        return (4.00 - (stats.ERA || 4.00)) * (stats.IP || 100);
+      case "WHIP":
+        return (1.25 - (stats.WHIP || 1.25)) * (stats.IP || 100) * 4;
+      default:
+        return Number(stats[category as keyof typeof stats] || 0);
+    }
+  };
+
+  const currentOverallPick = (currentPickIndex ?? 0) + 1;
+  const nextUserPick = userPicks.find((pick) => pick.overallPick > currentOverallPick);
+  const picksUntilNextTurn = nextUserPick
+    ? Math.max(1, nextUserPick.overallPick - currentOverallPick)
+    : 12;
+  const bestOverallScore = sortedRecommendations[0]?.score ?? 0;
+
+  const getDecision = (recommendation: Recommendation): RecommendationDecision => {
+    const picksAheadOfMarket = recommendation.player.adp - currentOverallPick;
+    const scoreGap = bestOverallScore - recommendation.score;
+    const likelyToReturn = recommendation.pReturn >= 0.70;
+    const clearReach =
+      picksAheadOfMarket > Math.max(10, picksUntilNextTurn * 0.7) ||
+      recommendation.reachPenalty <= -4;
+
+    if (likelyToReturn && clearReach) return "wait";
+    if (recommendation.pReturn < 0.40 && scoreGap <= 8) return "draft";
+    if (picksAheadOfMarket <= 6 && scoreGap <= 5) return "draft";
+    if (recommendation.pReturn < 0.72 || scoreGap <= 10) return "consider";
+    return "wait";
+  };
+
+  const focusedRecommendations = useMemo(() => {
+    if (recommendationFocus === "all") return displayRecs;
+
+    let eligible = sortedRecommendations;
+    if (recommendationFocus === "hitters") {
+      eligible = eligible.filter((recommendation) => !recommendation.player.isPitcher);
+    } else if (recommendationFocus === "pitchers") {
+      eligible = eligible.filter((recommendation) => recommendation.player.isPitcher);
+    } else if (recommendationFocus.startsWith("position:")) {
+      const position = recommendationFocus.slice("position:".length);
+      eligible = eligible.filter((recommendation) => recommendation.player.positions.includes(position));
+    } else if (recommendationFocus.startsWith("category:")) {
+      const category = recommendationFocus.slice("category:".length);
+      const isPitchingCategory = PITCHING_CATEGORY_FOCUSES.includes(category);
+      const decisionOrder: Record<RecommendationDecision, number> = {
+        draft: 0,
+        consider: 0,
+        wait: 1,
+      };
+
+      eligible = eligible
+        .filter((recommendation) => recommendation.player.isPitcher === isPitchingCategory)
+        .sort((a, b) => {
+          const timingDifference = decisionOrder[getDecision(a)] - decisionOrder[getDecision(b)];
+          if (timingDifference !== 0) return timingDifference;
+
+          const contributionDifference =
+            categoryContribution(b.player, category) - categoryContribution(a.player, category);
+          return contributionDifference || b.score - a.score;
+        });
+    }
+
+    return eligible.slice(0, 4);
+  }, [
+    recommendationFocus,
+    sortedRecommendations,
+    displayRecs,
+    currentOverallPick,
+    picksUntilNextTurn,
+    bestOverallScore,
+  ]);
+
+  const getDecisionReason = (recommendation: Recommendation, decision: RecommendationDecision) => {
+    const picksAheadOfMarket = Math.round(recommendation.player.adp - currentOverallPick);
+
+    if (decision === "wait") {
+      if (recommendation.pReturn >= 0.70) {
+        return `${formatPercent(recommendation.pReturn)} chance to reach your next pick`;
+      }
+      if (picksAheadOfMarket > 0) return `Market is about ${picksAheadOfMarket} picks away`;
+      return "Better overall values are available now";
+    }
+    if (decision === "draft") {
+      return recommendation.pReturn < 0.40
+        ? "Unlikely to make it back"
+        : "Fits the current pick range";
+    }
+    return recommendation.pReturn >= 0.50
+      ? "Viable, but waiting may preserve value"
+      : "Reasonable fit if this is your priority";
+  };
+
+  const focusLabel = recommendationFocus.startsWith("position:")
+    ? recommendationFocus.slice("position:".length)
+    : recommendationFocus.startsWith("category:")
+      ? recommendationFocus.slice("category:".length)
+      : recommendationFocus === "all"
+        ? "Overall"
+        : recommendationFocus[0].toUpperCase() + recommendationFocus.slice(1);
+
+  const overallAlternatives = recommendationFocus === "all"
+    ? []
+    : displayRecs
+        .filter((recommendation) => !focusedRecommendations.some((focused) => focused.player.id === recommendation.player.id))
+        .slice(0, 2);
 
   const targetBoardData = useMemo(() => {
     const futureUserPicks = userPicks.filter((p) => p.overallPick >= currentPickIndex + 1);
@@ -134,6 +262,87 @@ export default function DashboardSummary({
   const formatPercent = (p: number) => {
     return `${Math.round(p * 100)}%`;
   };
+
+  const renderRecommendation = (rec: Recommendation, index: number, compact = false) => {
+    const returnLevel = getReturnLevel(rec.pReturn);
+    const scarcityPremium = rec.scarcityDropOff * (1.0 - rec.pReturn) * rec.weights.scarcity;
+    const decision = getDecision(rec);
+    const decisionLabel = decision === "draft" ? "Draft Now" : decision === "consider" ? "Consider" : "Wait";
+    const focusedCategory = recommendationFocus.startsWith("category:")
+      ? recommendationFocus.slice("category:".length)
+      : null;
+
+    return (
+      <div key={rec.player.id} className={styles.recItem} data-decision={decision}>
+        <div className={styles.recItemLeft}>
+          <span className={styles.recRank}>{index + 1}</span>
+          <div className={styles.recInfo}>
+            <div className={styles.recNameRow}>
+              <span className={styles.recName}>{rec.player.name}</span>
+              {!compact && (
+                <span className={styles.recDecision} data-decision={decision}>
+                  {decisionLabel}
+                </span>
+              )}
+            </div>
+            <span className={styles.recSub}>
+              {rec.player.team} | {rec.player.positions.join("/")} | ADP {rec.player.adp.toFixed(0)}
+            </span>
+            {!compact && (
+              <span className={styles.recDecisionReason}>
+                {getDecisionReason(rec, decision)}
+                {focusedCategory && (
+                  <> | {focusedCategory}: {formatCategoryContribution(rec.player, focusedCategory)}</>
+                )}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.recItemRight}>
+          <div className={styles.recMetric}>
+            <span className={styles.recMetricLabel}>Return</span>
+            <span
+              className={`${styles.recReturnGlow} ${styles.recMetricVal}`}
+              data-level={returnLevel}
+            >
+              {formatPercent(rec.pReturn)}
+            </span>
+          </div>
+
+          <div className={styles.recMetric}>
+            <span className={styles.recMetricLabel}>Score</span>
+            <span className={styles.recMetricVal} style={{ color: "var(--primary)" }}>
+              {rec.score.toFixed(1)}
+            </span>
+            {!compact && (
+              <span
+                className={styles.recScoreDetail}
+                title={`Draft Phase: ${rec.phase.toUpperCase()}\nBase Value: $${rec.player.value.toFixed(1)}\nScarcity Premium: +$${scarcityPremium.toFixed(1)}\nStats Adjustment: ${rec.statsAdjustment >= 0 ? "+" : ""}$${rec.statsAdjustment.toFixed(1)}\nUpside Bonus: +$${rec.upsideBonus.toFixed(1)}\nReach Penalty: ${rec.reachPenalty.toFixed(1)}${rec.isBench ? `\nBench Penalty: x${rec.weights.benchDiscount}` : ""}`}
+              >
+                {rec.reachPenalty < 0 ? `${rec.reachPenalty.toFixed(1)} reach` : rec.phase}
+              </span>
+            )}
+          </div>
+
+          <button
+            className={`btn ${isOnClock && decision !== "wait" ? "btn-primary" : "btn-secondary"}`}
+            style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+            onClick={() => onDraftPlayer(rec.player.id)}
+          >
+            {decision === "wait" ? "Draft Anyway" : "Draft"}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  function formatCategoryContribution(player: Player, category: string) {
+    const value = player.stats[category as keyof typeof player.stats];
+    if (category === "AVG") return Number(value || 0).toFixed(3);
+    if (category === "ERA" || category === "WHIP") return Number(value || 0).toFixed(2);
+    return Math.round(Number(value || 0)).toString();
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -635,77 +844,96 @@ export default function DashboardSummary({
         </div>
 
         <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "-6px" }}>
-          Smart ranking combining baseline Auction value, Scarcity drop-off, and Probability of return.
+          Focus on a roster goal without losing draft timing or the best overall alternatives.
         </p>
 
+        <div className={styles.recFocusToolbar}>
+          <div className={styles.recFocusTabs} aria-label="Recommendation player type">
+            {([
+              { id: "all", label: "All" },
+              { id: "hitters", label: "Hitters" },
+              { id: "pitchers", label: "Pitchers" },
+            ] as const).map((focus) => (
+              <button
+                key={focus.id}
+                type="button"
+                className={styles.recFocusTab}
+                data-active={recommendationFocus === focus.id}
+                onClick={() => setRecommendationFocus(focus.id)}
+              >
+                {focus.label}
+              </button>
+            ))}
+          </div>
+
+          <div className={styles.recFocusMenus}>
+            <label className={styles.recFocusMenu}>
+              <span>Position</span>
+              <select
+                value={recommendationFocus.startsWith("position:") ? recommendationFocus : ""}
+                onChange={(event) =>
+                  setRecommendationFocus((event.target.value || "all") as RecommendationFocus)
+                }
+              >
+                <option value="">Any</option>
+                {POSITION_FOCUSES.map((position) => (
+                  <option key={position} value={`position:${position}`}>{position}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className={styles.recFocusMenu}>
+              <span>Category</span>
+              <select
+                value={recommendationFocus.startsWith("category:") ? recommendationFocus : ""}
+                onChange={(event) =>
+                  setRecommendationFocus((event.target.value || "all") as RecommendationFocus)
+                }
+              >
+                <option value="">Any</option>
+                <optgroup label="Hitting">
+                  {HITTING_CATEGORY_FOCUSES.map((category) => (
+                    <option key={category} value={`category:${category}`}>{category}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Pitching">
+                  {PITCHING_CATEGORY_FOCUSES.map((category) => (
+                    <option key={category} value={`category:${category}`}>{category}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div className={styles.recFocusSummary}>
+          <span>{focusLabel} focus</span>
+          <span>Timing uses ADP, return probability, reach cost, and overall value.</span>
+        </div>
+
         <div className={styles.recList}>
-          {displayRecs.map((rec, index) => {
-            const returnLevel = getReturnLevel(rec.pReturn);
-            const scarcityPremium = rec.scarcityDropOff * (1.0 - rec.pReturn) * rec.weights.scarcity;
-            
-            return (
-              <div key={rec.player.id} className={styles.recItem}>
-                <div className={styles.recItemLeft}>
-                  <span className={styles.recRank}>{index + 1}</span>
-                  <div className={styles.recInfo}>
-                    <span className={styles.recName}>{rec.player.name}</span>
-                    <span className={styles.recSub}>
-                      {rec.player.team} • {rec.player.positions.join("/")} • ADP {rec.player.adp.toFixed(0)}
-                    </span>
-                  </div>
-                </div>
+          {focusedRecommendations.map((rec, index) => renderRecommendation(rec, index))}
 
-                <div className={styles.recItemRight}>
-                  {/* Return Prob */}
-                  <div className={styles.recMetric} style={{ marginRight: "4px" }}>
-                    <span className={styles.recMetricLabel}>Return%</span>
-                    <span className={`${styles.recReturnGlow} ${styles.recMetricVal}`} data-level={returnLevel} style={{ fontSize: "0.75rem", padding: "1px 5px", marginTop: "2px" }}>
-                      {formatPercent(rec.pReturn)}
-                    </span>
-                  </div>
-
-                  {/* Score */}
-                  <div className={styles.recMetric} style={{ alignItems: "center" }}>
-                    <span className={styles.recMetricLabel}>Score ({rec.phase})</span>
-                    <span className={styles.recMetricVal} style={{ color: "var(--primary)", fontWeight: 700, fontSize: "0.95rem" }}>
-                      {rec.score.toFixed(1)}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.62rem",
-                        color: rec.isBench ? "var(--warning)" : "var(--text-secondary)",
-                        marginTop: "2px",
-                        whiteSpace: "nowrap"
-                      }}
-                      title={`Draft Phase: ${rec.phase.toUpperCase()}\nBase Value: $${rec.player.value.toFixed(1)}\nScarcity Premium: +$${scarcityPremium.toFixed(1)} (wt: ${rec.weights.scarcity})\nStats Adjustment: ${rec.statsAdjustment >= 0 ? "+" : ""}$${rec.statsAdjustment.toFixed(1)} (wt: ${rec.weights.needs})\nUpside Bonus: +$${rec.upsideBonus.toFixed(1)} (wt: ${rec.weights.upside})\nReach Penalty: ${rec.reachPenalty < 0 ? "" : "+"}$${rec.reachPenalty.toFixed(1)} (wt: ${rec.weights.reach})${rec.isBench ? `\nBench Penalty: x${rec.weights.benchDiscount}` : ""}`}
-                    >
-                      {rec.isBench 
-                        ? `($${rec.player.value.toFixed(0)} + $${scarcityPremium.toFixed(0)} ${rec.statsAdjustment >= 0 ? "+" : ""}$${rec.statsAdjustment.toFixed(0)}${rec.upsideBonus > 0 ? ` +$${rec.upsideBonus.toFixed(0)}` : ""}${rec.reachPenalty < 0 ? ` -$${Math.abs(rec.reachPenalty).toFixed(0)}` : ""}) * ${rec.weights.benchDiscount}`
-                        : `$${rec.player.value.toFixed(1)} + $${scarcityPremium.toFixed(1)} ${rec.statsAdjustment >= 0 ? "+" : ""}$${rec.statsAdjustment.toFixed(1)}${rec.upsideBonus > 0 ? ` +$${rec.upsideBonus.toFixed(1)}` : ""}${rec.reachPenalty < 0 ? ` -$${Math.abs(rec.reachPenalty).toFixed(1)}` : ""}`
-                      }
-                    </span>
-                  </div>
-
-                  {/* Draft direct button */}
-                  <button
-                    className={`btn ${isOnClock ? "btn-primary" : "btn-secondary"}`}
-                    style={{ padding: "4px 8px", fontSize: "0.75rem" }}
-                    onClick={() => onDraftPlayer(rec.player.id)}
-                  >
-                    Draft
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-
-          {displayRecs.length === 0 && (
+          {focusedRecommendations.length === 0 && (
             <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "12px" }}>
-              No available recommendations. Draft may be complete.
+              No available players match this focus.
             </span>
           )}
         </div>
+
+        {overallAlternatives.length > 0 && (
+          <div className={styles.recAlternatives}>
+            <div className={styles.recAlternativesHeader}>
+              <span>Best overall alternatives</span>
+              <button type="button" onClick={() => setRecommendationFocus("all")}>
+                View all
+              </button>
+            </div>
+            <div className={styles.recList}>
+              {overallAlternatives.map((rec, index) => renderRecommendation(rec, index, true))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

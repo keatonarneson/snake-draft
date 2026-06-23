@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import styles from "../app/page.module.css";
-import { DraftPick, getCpuArchetype } from "../utils/draftEngine";
+import { CpuProfile, DraftPick, getCpuArchetype, getCpuProfile, getCpuProfileTemplates } from "../utils/draftEngine";
 import { Player } from "../utils/sampleData";
 
 interface DraftBoardProps {
@@ -12,6 +13,9 @@ interface DraftBoardProps {
   userTeamIndex: number;
   players: Player[];
   cpuSavesStrategies?: string[];
+  cpuProfiles?: CpuProfile[];
+  onUndoLastPick?: () => void;
+  onEditPick?: (pickIndex: number, playerId: string) => void;
 }
 
 export default function DraftBoard({
@@ -21,6 +25,9 @@ export default function DraftBoard({
   userTeamIndex,
   players,
   cpuSavesStrategies = [],
+  cpuProfiles = [],
+  onUndoLastPick,
+  onEditPick,
 }: DraftBoardProps) {
   const activePickRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -28,9 +35,15 @@ export default function DraftBoard({
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
+  const [isProfilesModalOpen, setIsProfilesModalOpen] = useState(false);
+  const [profilesTab, setProfilesTab] = useState<"assigned" | "library">("assigned");
   const [debugSearchQuery, setDebugSearchQuery] = useState("");
   const [debugFilterType, setDebugFilterType] = useState<"all" | "drafted" | "undrafted">("all");
+  const [debugSortKey, setDebugSortKey] = useState<"pick" | "team">("pick");
+  const [debugSortDirection, setDebugSortDirection] = useState<"asc" | "desc">("asc");
   const [expandedPickIndex, setExpandedPickIndex] = useState<number | null>(null);
+  const [editingPickIndex, setEditingPickIndex] = useState<number | null>(null);
+  const [editPlayerId, setEditPlayerId] = useState("");
 
   // Auto-scroll the pick sequence to keep the current pick centered
   useEffect(() => {
@@ -108,7 +121,7 @@ export default function DraftBoard({
   }, [picks]);
 
   const filteredPicks = useMemo(() => {
-    return picks.filter((pick) => {
+    const visiblePicks = picks.filter((pick) => {
       // 1. Filter type
       if (debugFilterType === "drafted" && !pick.playerDraftedId) return false;
       if (debugFilterType === "undrafted" && pick.playerDraftedId) return false;
@@ -134,61 +147,168 @@ export default function DraftBoard({
 
       return true;
     });
-  }, [picks, debugFilterType, debugSearchQuery, teamNames, playerMap]);
+
+    return [...visiblePicks].sort((a, b) => {
+      const direction = debugSortDirection === "asc" ? 1 : -1;
+
+      if (debugSortKey === "team") {
+        const teamCompare = (teamNames[a.teamIndex] || "").localeCompare(teamNames[b.teamIndex] || "");
+        if (teamCompare !== 0) return teamCompare * direction;
+      }
+
+      return (a.overallPick - b.overallPick) * direction;
+    });
+  }, [picks, debugFilterType, debugSearchQuery, teamNames, playerMap, debugSortKey, debugSortDirection]);
+
+  const setDraftLogSort = (sortKey: "pick" | "team") => {
+    if (debugSortKey === sortKey) {
+      setDebugSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setDebugSortKey(sortKey);
+    setDebugSortDirection("asc");
+  };
+
+  const getDraftLogSortLabel = (sortKey: "pick" | "team") => {
+    if (debugSortKey !== sortKey) return "";
+    return debugSortDirection === "asc" ? " (asc)" : " (desc)";
+  };
 
   const numTeams = teamNames.length;
   const numRounds = picks[picks.length - 1]?.round || 30;
+  const profileRows = useMemo(() => {
+    return teamNames.map((teamName, index) => ({
+      name: teamName,
+      isUser: index === userTeamIndex,
+      profile: cpuProfiles[index] || getCpuProfile(index, userTeamIndex),
+    }));
+  }, [teamNames, userTeamIndex, cpuProfiles]);
+  const profileLibraryRows = useMemo(() => {
+    return getCpuProfileTemplates().map((profile) => ({
+      name: profile.label,
+      isUser: false,
+      profile,
+    }));
+  }, []);
+  const visibleProfileRows = profilesTab === "assigned" ? profileRows : profileLibraryRows;
 
-  const getPositionColor = (p: Player) => {
+  const profileWeightRows: { key: keyof CpuProfile; label: string }[] = [
+    { key: "marketTrust", label: "Market Trust" },
+    { key: "projectionTrust", label: "Projection Trust" },
+    { key: "rosterNeed", label: "Roster Need" },
+    { key: "categoryNeed", label: "Category Need" },
+    { key: "scarcity", label: "Scarcity" },
+    { key: "runReaction", label: "Run Reaction" },
+    { key: "upside", label: "Upside" },
+    { key: "reachTolerance", label: "Reach Tolerance" },
+    { key: "pitcherPreference", label: "Pitcher Lean" },
+    { key: "hitterPreference", label: "Hitter Lean" },
+    { key: "closerAggression", label: "Closer Aggression" },
+    { key: "randomness", label: "Randomness" },
+  ];
+
+  const editingPick = editingPickIndex !== null ? picks[editingPickIndex] : null;
+  const editPlayerOptions = useMemo(() => {
+    if (editingPickIndex === null) return [];
+
+    const draftedElsewhere = new Set(
+      picks
+        .filter((pick, index) => index !== editingPickIndex && pick.playerDraftedId)
+        .map((pick) => pick.playerDraftedId as string)
+    );
+
+    return players
+      .filter((player) => !draftedElsewhere.has(player.id))
+      .sort((a, b) => a.adp - b.adp);
+  }, [editingPickIndex, picks, players]);
+
+  const openEditPick = (pickIndex: number) => {
+    const pick = picks[pickIndex];
+    setEditingPickIndex(pickIndex);
+    setEditPlayerId(pick?.playerDraftedId || "");
+  };
+
+  const closeEditPick = () => {
+    setEditingPickIndex(null);
+    setEditPlayerId("");
+  };
+
+  const saveEditedPick = () => {
+    if (editingPickIndex === null || !editPlayerId || !onEditPick) return;
+    onEditPick(editingPickIndex, editPlayerId);
+    closeEditPick();
+  };
+
+  const getPrimaryPosition = (p: Player) => {
     if (p.isPitcher) {
-      if (p.positions.includes("RP")) {
-        return {
-          bg: "rgba(6, 182, 212, 0.12)",
-          border: "rgba(6, 182, 212, 0.25)",
-          color: "#22d3ee"
-        };
-      }
-      return {
-        bg: "rgba(59, 130, 246, 0.12)",
-        border: "rgba(59, 130, 246, 0.25)",
-        color: "#60a5fa"
-      };
+      return p.positions.includes("RP") ? "RP" : "SP";
     }
-    
-    if (p.positions.includes("C")) {
-      return {
-        bg: "rgba(16, 185, 129, 0.12)",
-        border: "rgba(16, 185, 129, 0.25)",
+
+    const hitterPriority = ["C", "SS", "2B", "3B", "1B", "OF", "UT"];
+    return hitterPriority.find((pos) => p.positions.includes(pos)) || p.positions[0] || "UTIL";
+  };
+
+  const getPositionColor = (position: string) => {
+    const positionColors: Record<string, { bg: string; border: string; color: string }> = {
+      C: {
+        bg: "rgba(16, 185, 129, 0.13)",
+        border: "rgba(16, 185, 129, 0.34)",
         color: "#34d399"
-      };
-    }
-    
-    if (p.positions.some(pos => ["1B", "2B", "3B", "SS"].includes(pos))) {
-      return {
-        bg: "rgba(245, 158, 11, 0.12)",
-        border: "rgba(245, 158, 11, 0.25)",
+      },
+      "1B": {
+        bg: "rgba(245, 158, 11, 0.13)",
+        border: "rgba(245, 158, 11, 0.34)",
         color: "#fbbf24"
-      };
-    }
-    
-    if (p.positions.includes("OF")) {
-      return {
-        bg: "rgba(139, 92, 246, 0.12)",
-        border: "rgba(139, 92, 246, 0.25)",
-        color: "#a78bfa"
-      };
-    }
-    
-    return {
-      bg: "rgba(156, 163, 175, 0.08)",
-      border: "rgba(156, 163, 175, 0.2)",
-      color: "#d1d5db"
+      },
+      "2B": {
+        bg: "rgba(236, 72, 153, 0.13)",
+        border: "rgba(236, 72, 153, 0.34)",
+        color: "#f472b6"
+      },
+      "3B": {
+        bg: "rgba(249, 115, 22, 0.13)",
+        border: "rgba(249, 115, 22, 0.34)",
+        color: "#fb923c"
+      },
+      SS: {
+        bg: "rgba(168, 85, 247, 0.13)",
+        border: "rgba(168, 85, 247, 0.34)",
+        color: "#c084fc"
+      },
+      OF: {
+        bg: "rgba(20, 184, 166, 0.13)",
+        border: "rgba(20, 184, 166, 0.34)",
+        color: "#2dd4bf"
+      },
+      SP: {
+        bg: "rgba(59, 130, 246, 0.13)",
+        border: "rgba(59, 130, 246, 0.34)",
+        color: "#60a5fa"
+      },
+      RP: {
+        bg: "rgba(6, 182, 212, 0.13)",
+        border: "rgba(6, 182, 212, 0.34)",
+        color: "#22d3ee"
+      },
+      UT: {
+        bg: "rgba(156, 163, 175, 0.09)",
+        border: "rgba(156, 163, 175, 0.24)",
+        color: "#d1d5db"
+      },
+      UTIL: {
+        bg: "rgba(156, 163, 175, 0.09)",
+        border: "rgba(156, 163, 175, 0.24)",
+        color: "#d1d5db"
+      }
     };
+
+    return positionColors[position] || positionColors.UTIL;
   };
 
   return (
     <div className={styles.card} style={{ flexGrow: 1 }}>
-      <div className={styles.cardHeader} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div className={`${styles.cardHeader} ${styles.draftTrackerHeader}`}>
         <h3 className={styles.cardTitle} style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
           <svg
             width="18"
@@ -208,8 +328,43 @@ export default function DraftBoard({
           Draft Tracker
         </h3>
         
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className={styles.draftTrackerActions}>
           <button
+            className={styles.draftTrackerActionButton}
+            onClick={onUndoLastPick}
+            disabled={!onUndoLastPick || currentPickIndex <= 0}
+            style={{
+              background: currentPickIndex <= 0 ? "rgba(255, 255, 255, 0.03)" : "rgba(245, 158, 11, 0.12)",
+              border: currentPickIndex <= 0 ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(245, 158, 11, 0.3)",
+              color: currentPickIndex <= 0 ? "var(--text-muted)" : "var(--warning)",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              cursor: currentPickIndex <= 0 ? "not-allowed" : "pointer",
+              gap: "4px",
+              transition: "all 0.15s ease",
+            }}
+            title="Undo the most recent completed pick and pause CPU auto-picking"
+          >
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 7v6h6" />
+              <path d="M21 17a9 9 0 0 0-15-6.7L3 13" />
+            </svg>
+            Undo
+          </button>
+
+          <button
+            className={styles.draftTrackerActionButton}
             onClick={() => setIsModalOpen(true)}
             style={{
               background: "rgba(99, 102, 241, 0.12)",
@@ -220,8 +375,6 @@ export default function DraftBoard({
               fontSize: "0.68rem",
               fontWeight: 700,
               cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
               gap: "4px",
               transition: "all 0.15s ease",
             }}
@@ -250,6 +403,42 @@ export default function DraftBoard({
           </button>
 
           <button
+            className={styles.draftTrackerActionButton}
+            onClick={() => setIsProfilesModalOpen(true)}
+            style={{
+              background: "rgba(139, 92, 246, 0.12)",
+              border: "1px solid rgba(139, 92, 246, 0.3)",
+              color: "var(--accent)",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              gap: "4px",
+              transition: "all 0.15s ease",
+            }}
+            title="View CPU team profiles and behavior weights"
+          >
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            CPU Profiles
+          </button>
+
+          <button
+            className={styles.draftTrackerActionButton}
             onClick={() => setIsDebugModalOpen(true)}
             style={{
               background: "rgba(16, 185, 129, 0.12)",
@@ -260,8 +449,6 @@ export default function DraftBoard({
               fontSize: "0.68rem",
               fontWeight: 700,
               cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
               gap: "4px",
               transition: "all 0.15s ease",
             }}
@@ -296,7 +483,7 @@ export default function DraftBoard({
 
           {picksUntilUser !== -1 && (
             <span
-              className={`badge ${
+              className={`${styles.draftTrackerStatus} badge ${
                 picksUntilUser === 0
                   ? "badge-primary"
                   : picksUntilUser <= 5
@@ -385,7 +572,25 @@ export default function DraftBoard({
                 </div>
               </div>
 
-              <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {onEditPick && index <= currentPickIndex && (
+                  <button
+                    onClick={() => openEditPick(index)}
+                    style={{
+                      background: "rgba(255, 255, 255, 0.04)",
+                      border: "1px solid rgba(255, 255, 255, 0.08)",
+                      color: "var(--text-secondary)",
+                      padding: "2px 6px",
+                      borderRadius: "5px",
+                      fontSize: "0.65rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                    title={draftedPlayer ? "Change this pick" : "Set this pick manually"}
+                  >
+                    Edit
+                  </button>
+                )}
                 {draftedPlayer ? (
                   <span
                     style={{
@@ -645,13 +850,15 @@ export default function DraftBoard({
                           let cellBorder = "1px solid rgba(255,255,255,0.03)";
                           let textColor = "var(--text-secondary)";
                           let posText = "";
+                          let allPosText = "";
 
                           if (draftedPlayer) {
-                            const colors = getPositionColor(draftedPlayer);
+                            posText = getPrimaryPosition(draftedPlayer);
+                            allPosText = draftedPlayer.positions.join("/");
+                            const colors = getPositionColor(posText);
                             cellBg = colors.bg;
                             cellBorder = `1px solid ${colors.border}`;
                             textColor = colors.color;
-                            posText = draftedPlayer.positions.join("/");
                           } else if (isCurrent) {
                             cellBg = "rgba(255, 193, 7, 0.05)";
                             cellBorder = "1px solid var(--warning)";
@@ -679,7 +886,7 @@ export default function DraftBoard({
                           // Tooltips
                           let tooltipText = "";
                           if (draftedPlayer) {
-                            tooltipText = `${draftedPlayer.name} (${posText}) - Drafted by ${teamNames[tIdx]} (Value: $${draftedPlayer.value.toFixed(1)}) - Rd ${pick.round}, Pick ${pick.pickInRound} (Overall #${pick.overallPick})`;
+                            tooltipText = `${draftedPlayer.name} (${allPosText}) - Drafted by ${teamNames[tIdx]} (Value: $${draftedPlayer.value.toFixed(1)}) - Rd ${pick.round}, Pick ${pick.pickInRound} (Overall #${pick.overallPick})`;
                           } else if (isCurrent) {
                             tooltipText = `${teamNames[tIdx]} is ON THE CLOCK - Rd ${pick.round}, Pick ${pick.pickInRound} (Overall #${pick.overallPick})`;
                           } else {
@@ -721,7 +928,21 @@ export default function DraftBoard({
                                       {getAbbreviatedName(draftedPlayer.name)}
                                     </span>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.62rem" }}>
-                                      <span style={{ color: textColor, fontWeight: 700 }}>{posText}</span>
+                                      <span
+                                        style={{
+                                          color: textColor,
+                                          fontWeight: 800,
+                                          lineHeight: 1,
+                                          padding: "2px 5px",
+                                          borderRadius: "4px",
+                                          border: `1px solid ${getPositionColor(posText).border}`,
+                                          background: "rgba(0, 0, 0, 0.18)",
+                                          minWidth: "24px",
+                                          textAlign: "center"
+                                        }}
+                                      >
+                                        {posText}
+                                      </span>
                                       <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>${draftedPlayer.value.toFixed(0)}</span>
                                     </div>
                                   </>
@@ -889,6 +1110,31 @@ export default function DraftBoard({
                   </button>
                 ))}
               </div>
+
+              <div style={{ display: "flex", gap: "6px" }}>
+                {([
+                  { key: "pick", label: "Pick Order" },
+                  { key: "team", label: "Team" },
+                ] as const).map((sort) => (
+                  <button
+                    key={sort.key}
+                    onClick={() => setDraftLogSort(sort.key)}
+                    style={{
+                      background: debugSortKey === sort.key ? "var(--primary)" : "rgba(255,255,255,0.05)",
+                      border: "none",
+                      color: debugSortKey === sort.key ? "#ffffff" : "var(--text-secondary)",
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    {sort.label}{getDraftLogSortLabel(sort.key)}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Table Container */}
@@ -896,9 +1142,25 @@ export default function DraftBoard({
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", textAlign: "left" }}>
                 <thead>
                   <tr style={{ background: "rgba(255, 255, 255, 0.03)", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                    <th style={{ padding: "10px 12px", color: "var(--text-secondary)" }}>Pick #</th>
+                    <th style={{ padding: "10px 12px", color: "var(--text-secondary)" }}>
+                      <button
+                        type="button"
+                        onClick={() => setDraftLogSort("pick")}
+                        style={{ background: "none", border: "none", color: "inherit", font: "inherit", fontWeight: 800, cursor: "pointer", padding: 0 }}
+                      >
+                        Pick #{getDraftLogSortLabel("pick")}
+                      </button>
+                    </th>
                     <th style={{ padding: "10px 12px", color: "var(--text-secondary)" }}>Round</th>
-                    <th style={{ padding: "10px 12px", color: "var(--text-secondary)" }}>Team</th>
+                    <th style={{ padding: "10px 12px", color: "var(--text-secondary)" }}>
+                      <button
+                        type="button"
+                        onClick={() => setDraftLogSort("team")}
+                        style={{ background: "none", border: "none", color: "inherit", font: "inherit", fontWeight: 800, cursor: "pointer", padding: 0 }}
+                      >
+                        Team{getDraftLogSortLabel("team")}
+                      </button>
+                    </th>
                     <th style={{ padding: "10px 12px", color: "var(--text-secondary)" }}>Player Drafted</th>
                     <th style={{ padding: "10px 12px", color: "var(--text-secondary)" }}>ADP</th>
                     <th style={{ padding: "10px 12px", color: "var(--text-secondary)" }}>Min/Max</th>
@@ -913,7 +1175,10 @@ export default function DraftBoard({
                     const isExpanded = expandedPickIndex === pick.overallPick;
                     
                     const cpuDetails = pick.cpuScoreDetails;
-                    const cpuArchetype = isUser ? "USER" : getCpuArchetype(pick.teamIndex, userTeamIndex);
+                    const cpuProfile = cpuProfiles[pick.teamIndex] || getCpuProfile(pick.teamIndex, userTeamIndex);
+                    const cpuArchetype = isUser ? "USER" : cpuProfile.archetype || getCpuArchetype(pick.teamIndex, userTeamIndex);
+                    const cpuProfileLabel = isUser ? "USER" : cpuProfile.label;
+                    const cpuSavesStrategy = cpuProfile.savesStrategy || cpuSavesStrategies[pick.teamIndex] || "balanced";
                     
                     let rowBg = "transparent";
                     if (isUser) {
@@ -964,20 +1229,20 @@ export default function DraftBoard({
                                 }`} 
                                 style={{ fontSize: "0.55rem", padding: "1px 5px", textTransform: "uppercase" }}
                               >
-                                {cpuArchetype}
+                                {cpuProfileLabel}
                               </span>
                               {!isUser && (
                                 <span 
                                   className={`badge ${
-                                    (cpuSavesStrategies[pick.teamIndex] || "balanced") === "aggressive"
+                                    cpuSavesStrategy === "aggressive"
                                       ? "badge-danger"
-                                      : (cpuSavesStrategies[pick.teamIndex] || "balanced") === "wait"
+                                      : cpuSavesStrategy === "wait"
                                       ? "badge-secondary"
                                       : "badge-outline"
                                   }`}
                                   style={{ fontSize: "0.55rem", padding: "1px 5px", textTransform: "uppercase" }}
                                 >
-                                  {(cpuSavesStrategies[pick.teamIndex] || "balanced")} SV
+                                  {cpuSavesStrategy} SV
                                 </span>
                               )}
                             </div>
@@ -1113,6 +1378,239 @@ export default function DraftBoard({
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {typeof document !== "undefined" && isProfilesModalOpen && createPortal((
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(8, 11, 17, 0.78)",
+            backdropFilter: "blur(10px)",
+            zIndex: 10000,
+            display: "grid",
+            placeItems: "center",
+            padding: "24px",
+            boxSizing: "border-box",
+          }}
+          onClick={() => setIsProfilesModalOpen(false)}
+        >
+          <div
+            style={{
+              width: "calc(100vw - 48px)",
+              maxWidth: "1680px",
+              maxHeight: "90vh",
+              background: "#111827",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: "12px",
+              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.55)",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800, color: "var(--text-primary)" }}>
+                  CPU Profiles
+                </h3>
+                <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                  Persistent team behavior weights used by the CPU draft model.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsProfilesModalOpen(false)}
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  width: "30px",
+                  height: "30px",
+                  borderRadius: "50%",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ display: "inline-flex", alignSelf: "flex-start", background: "rgba(0,0,0,0.22)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "3px", gap: "3px" }}>
+              {([
+                { id: "assigned", label: "Assigned Teams" },
+                { id: "library", label: "All Profiles" },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setProfilesTab(tab.id)}
+                  style={{
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "7px 12px",
+                    fontSize: "0.76rem",
+                    fontWeight: profilesTab === tab.id ? 800 : 600,
+                    cursor: "pointer",
+                    background: profilesTab === tab.id ? "var(--accent)" : "transparent",
+                    color: profilesTab === tab.id ? "#ffffff" : "var(--text-secondary)",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ overflow: "auto", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "1480px" }}>
+                <thead>
+                  <tr style={{ background: "rgba(255, 255, 255, 0.04)", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                    <th style={{ padding: "10px 12px", color: "var(--text-secondary)", textAlign: "left", position: "sticky", left: 0, background: "#172033", zIndex: 2, minWidth: "150px" }}>{profilesTab === "assigned" ? "Team" : "Profile"}</th>
+                    <th style={{ padding: "10px 12px", color: "var(--text-secondary)", textAlign: "left", minWidth: "150px" }}>Profile</th>
+                    <th style={{ padding: "10px 12px", color: "var(--text-secondary)", textAlign: "left", minWidth: "100px" }}>Type</th>
+                    <th style={{ padding: "10px 12px", color: "var(--text-secondary)", textAlign: "left", minWidth: "90px" }}>SV Plan</th>
+                    {profileWeightRows.map((weight) => (
+                      <th key={weight.key} style={{ padding: "10px 12px", color: "var(--text-secondary)", textAlign: "right", whiteSpace: "nowrap", minWidth: "110px" }}>
+                        {weight.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleProfileRows.map(({ name, isUser, profile }) => (
+                    <tr key={`${profilesTab}-${name}-${profile.id}`} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: isUser ? "rgba(99, 102, 241, 0.06)" : "transparent" }}>
+                      <td style={{ padding: "10px 12px", fontWeight: 700, color: isUser ? "var(--primary)" : "var(--text-primary)", position: "sticky", left: 0, background: isUser ? "#19203a" : "#111827", zIndex: 1 }}>
+                        {name}
+                      </td>
+                      <td style={{ padding: "10px 12px", color: "var(--text-primary)", fontWeight: 700, whiteSpace: "nowrap" }}>
+                        {profile.label}
+                      </td>
+                      <td style={{ padding: "10px 12px", color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                        {profile.archetype}
+                      </td>
+                      <td style={{ padding: "10px 12px", color: "var(--text-secondary)", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                        {profile.savesStrategy}
+                      </td>
+                      {profileWeightRows.map((weight) => {
+                        const value = Number(profile[weight.key]);
+                        return (
+                          <td
+                            key={weight.key}
+                            style={{
+                              padding: "10px 12px",
+                              textAlign: "right",
+                              fontFamily: "var(--font-mono)",
+                              color: value > 1.15 ? "var(--success)" : value < 0.85 ? "var(--warning)" : "var(--text-secondary)",
+                              fontWeight: value > 1.15 || value < 0.85 ? 700 : 500,
+                            }}
+                          >
+                            {value.toFixed(2)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
+
+      {editingPick && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(8, 11, 17, 0.74)",
+            backdropFilter: "blur(8px)",
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px",
+          }}
+          onClick={closeEditPick}
+        >
+          <div
+            style={{
+              width: "min(520px, 100%)",
+              background: "#111827",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: "12px",
+              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.55)",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "var(--text-primary)" }}>
+                  Edit Pick #{editingPick.overallPick}
+                </h3>
+                <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                  Round {editingPick.round}, Pick {editingPick.pickInRound} - {teamNames[editingPick.teamIndex]}
+                </p>
+              </div>
+              <button
+                onClick={closeEditPick}
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  width: "30px",
+                  height: "30px",
+                  borderRadius: "50%",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", fontWeight: 700 }}>
+                Player
+              </label>
+              <select
+                className="premium-input"
+                value={editPlayerId}
+                onChange={(e) => setEditPlayerId(e.target.value)}
+                style={{ width: "100%" }}
+              >
+                <option value="">Select a player...</option>
+                {editPlayerOptions.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {player.name} - {player.team} - {player.positions.join("/")} - ADP {player.adp.toFixed(0)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button className="btn btn-secondary" type="button" onClick={closeEditPick}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={!editPlayerId || !onEditPick}
+                onClick={saveEditedPick}
+              >
+                Save Pick
+              </button>
             </div>
           </div>
         </div>

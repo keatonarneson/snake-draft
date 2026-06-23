@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import styles from "../app/page.module.css";
-import { Player, PlayerStats } from "../utils/sampleData";
+import { Player } from "../utils/sampleData";
 
 interface RosterTrackerProps {
   teamIndex: number;
@@ -40,7 +40,7 @@ const ROSTER_SLOTS = [
   { label: "OF", type: "batter", positions: ["OF"] },
   { label: "OF", type: "batter", positions: ["OF"] },
   { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "UT", type: "batter", positions: ["C", "1B", "2B", "3B", "SS", "OF", "UT"] },
+  { label: "UT", type: "batter", positions: ["1B", "2B", "3B", "SS", "OF", "UT"] },
   { label: "P", type: "pitcher", positions: ["SP", "RP"] },
   { label: "P", type: "pitcher", positions: ["SP", "RP"] },
   { label: "P", type: "pitcher", positions: ["SP", "RP"] },
@@ -55,7 +55,6 @@ const ROSTER_SLOTS = [
 export default function RosterTracker({
   teamIndex,
   teamNames,
-  userTeamIndex,
   draftedPlayers,
   onSelectTeam,
   numRounds,
@@ -81,6 +80,10 @@ export default function RosterTracker({
     
     // Sort drafted players: active roster positions first, utility next
     const unplaced = [...myDrafted];
+    const canPlayerUseSlot = (player: Player, slot: typeof slots[number]) => {
+      if (player.positions.includes("C") && !slot.positions.includes("C")) return false;
+      return player.positions.some(pos => slot.positions.includes(pos));
+    };
 
     // First pass: Fit players into their exact primary position slots (e.g. C to C, SS to SS)
     for (let i = 0; i < unplaced.length; i++) {
@@ -91,7 +94,7 @@ export default function RosterTracker({
       for (const slot of slots) {
         if (slot.player === null && slot.label !== "UT" && slot.label !== "CI" && slot.label !== "MI" && slot.label !== "P") {
           // If player has this position
-          if (player.positions.some(pos => slot.positions.includes(pos))) {
+          if (canPlayerUseSlot(player, slot)) {
             slot.player = player;
             placed = true;
             break;
@@ -112,7 +115,7 @@ export default function RosterTracker({
 
       for (const slot of slots) {
         if (slot.player === null && (slot.label === "CI" || slot.label === "MI")) {
-          if (player.positions.some(pos => slot.positions.includes(pos))) {
+          if (canPlayerUseSlot(player, slot)) {
             slot.player = player;
             placed = true;
             break;
@@ -133,7 +136,7 @@ export default function RosterTracker({
 
       for (const slot of slots) {
         if (slot.player === null) {
-          if (slot.label === "UT" && !player.isPitcher) {
+          if (slot.label === "UT" && !player.isPitcher && canPlayerUseSlot(player, slot)) {
             slot.player = player;
             placed = true;
             break;
@@ -216,14 +219,20 @@ export default function RosterTracker({
 
   // Use custom targets passed as prop
 
+  const MAX_TARGET_PERCENT = 130;
+  const targetMarkerPosition = `${(100 / MAX_TARGET_PERCENT) * 100}%`;
+
   const getPercentOfTarget = (val: number, target: number, invert = false) => {
     if (invert) {
       // For ERA/WHIP: if val is lower than target, it's > 100%
       if (val === 0) return 0;
-      return Math.min(130, Math.round((target / val) * 100));
+      return Math.min(MAX_TARGET_PERCENT, Math.round((target / val) * 100));
     }
-    return Math.min(130, Math.round((val / target) * 100));
+    return Math.min(MAX_TARGET_PERCENT, Math.round((val / target) * 100));
   };
+
+  const getBarWidth = (val: number, target: number, invert = false) =>
+    `${(getPercentOfTarget(val, target, invert) / MAX_TARGET_PERCENT) * 100}%`;
 
   return (
     <div className={styles.card} style={{ flexGrow: 1 }}>
@@ -251,7 +260,7 @@ export default function RosterTracker({
         >
           {teamNames.map((name, idx) => (
             <option key={idx} value={idx}>
-              {name} {idx === userTeamIndex ? "(You)" : ""}
+              {name}
             </option>
           ))}
         </select>
@@ -279,8 +288,8 @@ export default function RosterTracker({
                   <span className={styles.statBarTargetLabel}>T: {targets.R}</span>
                 </div>
                 <div className={styles.statBarContainer}>
-                  <div className={styles.statBarFill} style={{ width: `${getPercentOfTarget(stats.R, targets.R)}%` }} />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarFill} style={{ width: getBarWidth(stats.R, targets.R) }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
 
@@ -291,8 +300,8 @@ export default function RosterTracker({
                   <span className={styles.statBarTargetLabel}>T: {targets.HR}</span>
                 </div>
                 <div className={styles.statBarContainer}>
-                  <div className={styles.statBarFill} style={{ width: `${getPercentOfTarget(stats.HR, targets.HR)}%` }} />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarFill} style={{ width: getBarWidth(stats.HR, targets.HR) }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
 
@@ -303,8 +312,8 @@ export default function RosterTracker({
                   <span className={styles.statBarTargetLabel}>T: {targets.RBI}</span>
                 </div>
                 <div className={styles.statBarContainer}>
-                  <div className={styles.statBarFill} style={{ width: `${getPercentOfTarget(stats.RBI, targets.RBI)}%` }} />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarFill} style={{ width: getBarWidth(stats.RBI, targets.RBI) }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
 
@@ -315,8 +324,8 @@ export default function RosterTracker({
                   <span className={styles.statBarTargetLabel}>T: {targets.SB}</span>
                 </div>
                 <div className={styles.statBarContainer}>
-                  <div className={styles.statBarFill} style={{ width: `${getPercentOfTarget(stats.SB, targets.SB)}%`, background: "linear-gradient(90deg, var(--secondary), var(--accent))" }} />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarFill} style={{ width: getBarWidth(stats.SB, targets.SB), background: "linear-gradient(90deg, var(--secondary), var(--accent))" }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
 
@@ -327,8 +336,8 @@ export default function RosterTracker({
                   <span className={styles.statBarTargetLabel}>T: {targets.AVG}</span>
                 </div>
                 <div className={styles.statBarContainer}>
-                  <div className={styles.statBarFill} style={{ width: `${getPercentOfTarget(stats.AVG, targets.AVG)}%` }} />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarFill} style={{ width: getBarWidth(stats.AVG, targets.AVG) }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
             </div>
@@ -346,8 +355,8 @@ export default function RosterTracker({
                   <span className={styles.statBarTargetLabel}>T: {targets.W}</span>
                 </div>
                 <div className={styles.statBarContainer}>
-                  <div className={styles.statBarFill} style={{ width: `${getPercentOfTarget(stats.W, targets.W)}%`, background: "linear-gradient(90deg, var(--secondary), var(--primary))" }} />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarFill} style={{ width: getBarWidth(stats.W, targets.W), background: "linear-gradient(90deg, var(--secondary), var(--primary))" }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
 
@@ -358,8 +367,8 @@ export default function RosterTracker({
                   <span className={styles.statBarTargetLabel}>T: {targets.SV}</span>
                 </div>
                 <div className={styles.statBarContainer}>
-                  <div className={styles.statBarFill} style={{ width: `${getPercentOfTarget(stats.SV, targets.SV)}%`, background: "linear-gradient(90deg, var(--accent), var(--secondary))" }} />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarFill} style={{ width: getBarWidth(stats.SV, targets.SV), background: "linear-gradient(90deg, var(--accent), var(--secondary))" }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
 
@@ -370,8 +379,8 @@ export default function RosterTracker({
                   <span className={styles.statBarTargetLabel}>T: {targets.SO}</span>
                 </div>
                 <div className={styles.statBarContainer}>
-                  <div className={styles.statBarFill} style={{ width: `${getPercentOfTarget(stats.SO, targets.SO)}%`, background: "linear-gradient(90deg, var(--secondary), var(--primary))" }} />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarFill} style={{ width: getBarWidth(stats.SO, targets.SO), background: "linear-gradient(90deg, var(--secondary), var(--primary))" }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
 
@@ -385,11 +394,11 @@ export default function RosterTracker({
                   <div
                     className={styles.statBarFill}
                     style={{
-                      width: `${stats.ERA > 0 ? getPercentOfTarget(stats.ERA, targets.ERA, true) : 0}%`,
+                      width: stats.ERA > 0 ? getBarWidth(stats.ERA, targets.ERA, true) : "0%",
                       background: stats.ERA > targets.ERA ? "rgba(239, 68, 68, 0.4)" : "linear-gradient(90deg, var(--success), var(--secondary))"
                     }}
                   />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
 
@@ -403,11 +412,11 @@ export default function RosterTracker({
                   <div
                     className={styles.statBarFill}
                     style={{
-                      width: `${stats.WHIP > 0 ? getPercentOfTarget(stats.WHIP, targets.WHIP, true) : 0}%`,
+                      width: stats.WHIP > 0 ? getBarWidth(stats.WHIP, targets.WHIP, true) : "0%",
                       background: stats.WHIP > targets.WHIP ? "rgba(239, 68, 68, 0.4)" : "linear-gradient(90deg, var(--success), var(--secondary))"
                     }}
                   />
-                  <div className={styles.statBarTargetLine} style={{ left: "75%" }} />
+                  <div className={styles.statBarTargetLine} style={{ left: targetMarkerPosition }} />
                 </div>
               </div>
             </div>

@@ -180,6 +180,9 @@ export function parsePlayersFromCSVs(hittersText: string, pitchersText: string):
     const adp = idxPADP !== -1 ? safeFloat(row[idxPADP], 0) : 0;
     const value = idxPDollars !== -1 ? safeFloat(row[idxPDollars], 0.0) : 0.0;
 
+    // For draft testing, Ohtani occupies one player slot and is treated only as a hitter.
+    if (name.toLowerCase() === "shohei ohtani") continue;
+
     const rawPosList = rawPOS.split(/[\/,;\s]+/).map(p => p.trim().toUpperCase());
     const positions = rawPosList.filter(pos => pos === "SP" || pos === "RP");
     if (positions.length === 0) positions.push("SP");

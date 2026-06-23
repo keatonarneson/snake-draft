@@ -143,7 +143,7 @@ export function fitRoster(
     { label: "MI", isPitcher: false, positions: ["2B", "SS"], priority: 2 },
 
     // Fully flexible hitter slot (Priority 3)
-    { label: "UT", isPitcher: false, positions: ["C", "1B", "2B", "3B", "SS", "OF", "UT"], priority: 3 },
+    { label: "UT", isPitcher: false, positions: ["1B", "2B", "3B", "SS", "OF", "UT"], priority: 3 },
 
     // Pitchers slots (Priority 1)
     { label: "P1", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
@@ -162,6 +162,11 @@ export function fitRoster(
   const bench: Player[] = [];
 
   const filledSlots = new Set<number>();
+  const canPlayerUseSlot = (player: Player, slot: typeof activeSlots[number]) => {
+    if (player.isPitcher !== slot.isPitcher) return false;
+    if (player.positions.includes("C") && !slot.positions.includes("C")) return false;
+    return player.positions.some(pos => slot.positions.includes(pos));
+  };
 
   for (const player of sortedPlayers) {
     let placed = false;
@@ -170,7 +175,7 @@ export function fitRoster(
     for (let i = 0; i < activeSlots.length; i++) {
       const slot = activeSlots[i];
       if (slot.priority === 1 && !filledSlots.has(i)) {
-        if (player.isPitcher === slot.isPitcher && player.positions.some(pos => slot.positions.includes(pos))) {
+        if (canPlayerUseSlot(player, slot)) {
           active.push(player);
           filledSlots.add(i);
           placed = true;
@@ -185,7 +190,7 @@ export function fitRoster(
     for (let i = 0; i < activeSlots.length; i++) {
       const slot = activeSlots[i];
       if (slot.priority === 2 && !filledSlots.has(i)) {
-        if (player.isPitcher === slot.isPitcher && player.positions.some(pos => slot.positions.includes(pos))) {
+        if (canPlayerUseSlot(player, slot)) {
           active.push(player);
           filledSlots.add(i);
           placed = true;
@@ -200,7 +205,7 @@ export function fitRoster(
     for (let i = 0; i < activeSlots.length; i++) {
       const slot = activeSlots[i];
       if (slot.priority === 3 && !filledSlots.has(i)) {
-        if (player.isPitcher === slot.isPitcher && player.positions.some(pos => slot.positions.includes(pos))) {
+        if (canPlayerUseSlot(player, slot)) {
           active.push(player);
           filledSlots.add(i);
           placed = true;
@@ -233,16 +238,16 @@ export function checkPositionalFit(
 }
 
 const TARGETS = {
-  R: 1166,
-  HR: 326,
-  RBI: 1120,
-  SB: 171,
-  AVG: 0.262,
-  W: 112,
-  SV: 90,
-  SO: 1725,
-  ERA: 3.75,
-  WHIP: 1.18,
+  R: 1125,
+  HR: 315,
+  RBI: 1103,
+  SB: 190,
+  AVG: 0.263,
+  W: 93,
+  SV: 88,
+  SO: 1275,
+  ERA: 3.65,
+  WHIP: 1.20,
 };
 
 export interface CategoryNeeds {
@@ -692,12 +697,16 @@ export function getRecommendations(
 
   return availablePlayers.map((player) => {
     const pReturn = calculateReturnProbability(pCurr, pNext, player);
+    const rosterCatchers = teamPlayers.filter((teamPlayer) => teamPlayer.positions.includes("C")).length;
+    const isExcessCatcher = player.positions.includes("C") && rosterCatchers >= 2;
     
     // Calculate player-specific scarcity drop-off using qualityWeight and value preservation
     let scarcityDropOff = 0;
     let bestScarcityDetails: ScarcityDetails | undefined = undefined;
 
     player.positions.forEach((pos) => {
+      if (isExcessCatcher && pos === "C") return;
+
       const info = scarcityMap[pos];
       if (info) {
         // playerQualityWeight = clamp((v_player - replacementValue) / max(0.01, v_best - replacementValue), 0, 1)
@@ -782,6 +791,9 @@ export function getRecommendations(
     if (isBench) {
       finalScore = baseScore > 0 ? baseScore * d_bench : baseScore * (2.0 - d_bench);
     }
+    if (isExcessCatcher) {
+      finalScore = baseScore > 0 ? baseScore * 0.05 - 25.0 : baseScore - 25.0;
+    }
 
     return {
       player,
@@ -828,6 +840,172 @@ export interface CpuScoreDetails {
 
 export type CpuArchetype = "balanced" | "market" | "projection" | "need" | "upside";
 
+export interface CpuProfile {
+  id: string;
+  label: string;
+  archetype: CpuArchetype;
+  savesStrategy: "wait" | "balanced" | "aggressive";
+  marketTrust: number;
+  projectionTrust: number;
+  rosterNeed: number;
+  categoryNeed: number;
+  scarcity: number;
+  runReaction: number;
+  upside: number;
+  reachTolerance: number;
+  pitcherPreference: number;
+  hitterPreference: number;
+  closerAggression: number;
+  randomness: number;
+}
+
+const CPU_PROFILE_TEMPLATES: CpuProfile[] = [
+  {
+    id: "balanced",
+    label: "Balanced",
+    archetype: "balanced",
+    savesStrategy: "balanced",
+    marketTrust: 1.0,
+    projectionTrust: 1.0,
+    rosterNeed: 1.0,
+    categoryNeed: 1.0,
+    scarcity: 1.0,
+    runReaction: 1.0,
+    upside: 1.0,
+    reachTolerance: 1.0,
+    pitcherPreference: 1.0,
+    hitterPreference: 1.0,
+    closerAggression: 1.0,
+    randomness: 1.0,
+  },
+  {
+    id: "market_anchor",
+    label: "Market Anchor",
+    archetype: "market",
+    savesStrategy: "balanced",
+    marketTrust: 1.35,
+    projectionTrust: 0.65,
+    rosterNeed: 0.85,
+    categoryNeed: 0.8,
+    scarcity: 0.95,
+    runReaction: 0.75,
+    upside: 0.65,
+    reachTolerance: 0.65,
+    pitcherPreference: 1.0,
+    hitterPreference: 1.0,
+    closerAggression: 0.95,
+    randomness: 0.55,
+  },
+  {
+    id: "projection_value",
+    label: "Projection Value",
+    archetype: "projection",
+    savesStrategy: "wait",
+    marketTrust: 0.75,
+    projectionTrust: 1.35,
+    rosterNeed: 0.9,
+    categoryNeed: 0.95,
+    scarcity: 0.8,
+    runReaction: 0.65,
+    upside: 0.9,
+    reachTolerance: 1.15,
+    pitcherPreference: 1.0,
+    hitterPreference: 1.0,
+    closerAggression: 0.55,
+    randomness: 0.8,
+  },
+  {
+    id: "roster_builder",
+    label: "Roster Builder",
+    archetype: "need",
+    savesStrategy: "balanced",
+    marketTrust: 0.95,
+    projectionTrust: 0.95,
+    rosterNeed: 1.35,
+    categoryNeed: 1.3,
+    scarcity: 1.1,
+    runReaction: 1.0,
+    upside: 0.75,
+    reachTolerance: 0.95,
+    pitcherPreference: 1.0,
+    hitterPreference: 1.0,
+    closerAggression: 1.0,
+    randomness: 0.85,
+  },
+  {
+    id: "upside_chaser",
+    label: "Upside Chaser",
+    archetype: "upside",
+    savesStrategy: "wait",
+    marketTrust: 0.85,
+    projectionTrust: 0.95,
+    rosterNeed: 0.75,
+    categoryNeed: 0.8,
+    scarcity: 0.9,
+    runReaction: 0.9,
+    upside: 1.65,
+    reachTolerance: 1.45,
+    pitcherPreference: 1.0,
+    hitterPreference: 1.0,
+    closerAggression: 0.65,
+    randomness: 1.3,
+  },
+  {
+    id: "pitching_foundation",
+    label: "Pitching Foundation",
+    archetype: "balanced",
+    savesStrategy: "balanced",
+    marketTrust: 1.0,
+    projectionTrust: 1.05,
+    rosterNeed: 1.0,
+    categoryNeed: 1.1,
+    scarcity: 1.05,
+    runReaction: 1.1,
+    upside: 0.9,
+    reachTolerance: 0.95,
+    pitcherPreference: 1.18,
+    hitterPreference: 0.96,
+    closerAggression: 1.05,
+    randomness: 0.9,
+  },
+  {
+    id: "bat_first",
+    label: "Bat First",
+    archetype: "balanced",
+    savesStrategy: "wait",
+    marketTrust: 0.95,
+    projectionTrust: 1.05,
+    rosterNeed: 1.0,
+    categoryNeed: 1.05,
+    scarcity: 0.95,
+    runReaction: 0.85,
+    upside: 1.0,
+    reachTolerance: 1.05,
+    pitcherPreference: 0.88,
+    hitterPreference: 1.16,
+    closerAggression: 0.55,
+    randomness: 1.0,
+  },
+  {
+    id: "closer_chaser",
+    label: "Closer Chaser",
+    archetype: "need",
+    savesStrategy: "aggressive",
+    marketTrust: 1.0,
+    projectionTrust: 0.95,
+    rosterNeed: 1.05,
+    categoryNeed: 1.2,
+    scarcity: 1.15,
+    runReaction: 1.35,
+    upside: 0.75,
+    reachTolerance: 1.1,
+    pitcherPreference: 1.04,
+    hitterPreference: 0.98,
+    closerAggression: 1.7,
+    randomness: 0.9,
+  },
+];
+
 export function getCpuArchetype(teamIndex: number, userTeamIndex: number): CpuArchetype {
   if (teamIndex === userTeamIndex) return "balanced";
   const relativeIndex = teamIndex > userTeamIndex ? teamIndex - 1 : teamIndex;
@@ -846,6 +1024,40 @@ export function getCpuArchetype(teamIndex: number, userTeamIndex: number): CpuAr
     "balanced",
   ];
   return archetypes[relativeIndex % archetypes.length];
+}
+
+export function getCpuProfile(teamIndex: number, userTeamIndex: number): CpuProfile {
+  if (teamIndex === userTeamIndex) {
+    return CPU_PROFILE_TEMPLATES[0];
+  }
+  const relativeIndex = teamIndex > userTeamIndex ? teamIndex - 1 : teamIndex;
+  return CPU_PROFILE_TEMPLATES[relativeIndex % CPU_PROFILE_TEMPLATES.length];
+}
+
+export function getCpuProfileTemplates(): CpuProfile[] {
+  return CPU_PROFILE_TEMPLATES;
+}
+
+export function isDraftableCloser(player: Player): boolean {
+  return player.positions.includes("RP") && (player.stats.SV || 0) >= 12;
+}
+
+export function isPremiumCloser(player: Player): boolean {
+  return isDraftableCloser(player) && (player.adp <= 100 || player.value >= 5 || (player.stats.SV || 0) >= 28);
+}
+
+export function getCpuCloserPlan(profile?: CpuProfile, fallbackStrategy: string = "balanced") {
+  const strategy = profile?.savesStrategy || fallbackStrategy;
+
+  if (strategy === "aggressive") {
+    return { target: 2, max: 3 };
+  }
+
+  if (strategy === "wait") {
+    return { target: 1, max: 2 };
+  }
+
+  return { target: 2, max: 2 };
 }
 
 export function randomNormal(mean = 0, stdDev = 1): number {
@@ -872,9 +1084,23 @@ export function calculateCpuScore(
   picks: DraftPick[],
   allPlayers: Player[],
   savesStrategy: string,
-  fixedRand?: number
+  fixedRand?: number,
+  cpuProfile?: CpuProfile
 ): CpuScoreDetails {
   const currentRound = Math.floor((currentPickIndex) / (picks.length / numRounds)) + 1;
+  const profile = cpuProfile ?? {
+    ...CPU_PROFILE_TEMPLATES[0],
+    archetype: cpuArchetype,
+    savesStrategy: savesStrategy as CpuProfile["savesStrategy"],
+  };
+  const effectiveSavesStrategy = profile.savesStrategy || savesStrategy;
+  const closerPlan = getCpuCloserPlan(profile, effectiveSavesStrategy);
+  const candidateIsCloser = isDraftableCloser(player);
+  const rosterClosers = cpuRoster.filter(isDraftableCloser);
+  const rosterPremiumClosers = cpuRoster.filter(isPremiumCloser);
+  const countClosers = rosterClosers.length;
+  const countPremiumClosers = rosterPremiumClosers.length;
+  const hasSolvedSavesEarly = countPremiumClosers >= 2;
 
   // 1. Base Player Value
   const adpDollars = calculateAdpValue(player.adp);
@@ -918,7 +1144,15 @@ export function calculateCpuScore(
     }
   }
 
-  const baseValue = adpWeight * adpDollars + consensusWeight * consensusDollars;
+  const adjustedAdpWeight = adpWeight * profile.marketTrust;
+  const adjustedConsensusWeight = consensusWeight * profile.projectionTrust;
+  const adjustedWeightTotal = Math.max(0.01, adjustedAdpWeight + adjustedConsensusWeight);
+  adpWeight = adjustedAdpWeight / adjustedWeightTotal;
+  consensusWeight = adjustedConsensusWeight / adjustedWeightTotal;
+
+  const playerTypePreference = player.isPitcher ? profile.pitcherPreference : profile.hitterPreference;
+  const preferenceMultiplier = 1.0 + ((playerTypePreference - 1.0) * 0.5);
+  const baseValue = (adpWeight * adpDollars + consensusWeight * consensusDollars) * preferenceMultiplier;
 
   // 2. Roster Need Bonus
   const { isBench } = checkPositionalFit(cpuRoster, player, numRounds);
@@ -928,7 +1162,6 @@ export function calculateCpuScore(
     const isRP = player.positions.includes("RP");
     
     const countC = cpuRoster.filter(p => p.positions.includes("C")).length;
-    const countRP = cpuRoster.filter(p => p.positions.includes("RP")).length;
 
     if (isCatcher) {
       if (countC >= 2) {
@@ -939,29 +1172,35 @@ export function calculateCpuScore(
         positionNeedScore = currentRound > 20 ? 0.75 : 0.35;
       }
     } else if (isRP) {
-      if (countRP >= 4) {
+      if (!candidateIsCloser) {
+        positionNeedScore = 0.10;
+      } else if (countClosers >= closerPlan.target || hasSolvedSavesEarly) {
         positionNeedScore = 0.0;
-      } else if (countRP === 0) {
+      } else if (countClosers === 0) {
         positionNeedScore = currentRound > 12 ? 1.0 : currentRound > 6 ? 0.75 : 0.50;
       } else {
-        positionNeedScore = currentRound > 15 ? 0.60 : 0.30;
+        positionNeedScore = currentRound > 15 ? 0.45 : 0.25;
       }
     } else {
       positionNeedScore = currentRound > 15 ? 1.0 : currentRound > 5 ? 0.75 : 0.50;
     }
   }
 
-  const needMultiplier = cpuArchetype === "need" ? 1.25 : 1.0;
+  const needMultiplier = (cpuArchetype === "need" ? 1.25 : 1.0) * profile.rosterNeed;
   const maxRosterNeed = (currentRound <= 5 ? 0.75 : currentRound <= 15 ? 2.00 : 3.00) * needMultiplier;
   const rosterNeedBonus = maxRosterNeed * positionNeedScore;
 
   // 3. Category Need Bonus
   const needs = calculateCategoryNeeds(cpuRoster, numRounds);
   const rawStatsAdjustment = calculateStatsAdjustment(player, needs);
-  const catNeedMultiplier = cpuArchetype === "need" ? 1.25 : 1.0;
+  const catNeedMultiplier = (cpuArchetype === "need" ? 1.25 : 1.0) * profile.categoryNeed;
   const maxCatBonus = (currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.50 : 2.50) * catNeedMultiplier;
   const normalizedAdjustment = Math.max(0.0, Math.min(1.0, rawStatsAdjustment / 4.0));
-  const categoryNeedBonus = maxCatBonus * normalizedAdjustment;
+  let categoryNeedBonus = maxCatBonus * normalizedAdjustment;
+
+  if (candidateIsCloser && (countClosers >= closerPlan.target || hasSolvedSavesEarly)) {
+    categoryNeedBonus *= 0.15;
+  }
 
   // 4. Position Run Bonus
   const lastPicks = picks.slice(Math.max(0, currentPickIndex - 12), currentPickIndex);
@@ -988,11 +1227,11 @@ export function calculateCpuScore(
       }
     }
 
-    const countOnRoster = cpuRoster.filter(p => p.positions.includes(pos)).length;
-    const slots = POSITION_SLOTS[pos] || 1;
+    const countOnRoster = pos === "RP" ? countClosers : cpuRoster.filter(p => p.positions.includes(pos)).length;
+    const slots = pos === "RP" ? closerPlan.target : POSITION_SLOTS[pos] || 1;
     const teamNeed = Math.max(0, 1.0 - (countOnRoster / slots));
 
-    const maxRunBonus = currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.25 : 1.00;
+    const maxRunBonus = (currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.25 : 1.00) * profile.runReaction;
     const bonusVal = runIntensity * teamNeed * maxRunBonus;
     if (bonusVal > positionRunBonus) {
       positionRunBonus = bonusVal;
@@ -1010,7 +1249,7 @@ export function calculateCpuScore(
     }
   });
 
-  const maxScarcityLimit = currentRound <= 5 ? 0.75 : currentRound <= 15 ? 1.50 : 1.50;
+  const maxScarcityLimit = (currentRound <= 5 ? 0.75 : currentRound <= 15 ? 1.50 : 1.50) * profile.scarcity;
   const scarcityBonus = Math.min(maxScarcityLimit, maxPositionScarcity * (maxScarcityLimit / 2.00));
 
   // 6. Role / Playing Time Security Bonus
@@ -1048,7 +1287,7 @@ export function calculateCpuScore(
   const adpVarianceScore = Math.min(1.0, adpVariance / 30.0);
   const upsideScore = Math.max(Math.min(1.0, upsideGap / 5.0), adpVarianceScore * 0.5);
 
-  const upsideMultiplier = cpuArchetype === "upside" ? 1.40 : 1.0;
+  const upsideMultiplier = (cpuArchetype === "upside" ? 1.40 : 1.0) * profile.upside;
   const phaseUpsideWeight = (currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.25 : 2.50) * upsideMultiplier;
   const upsideBonus = phaseUpsideWeight * upsideScore;
 
@@ -1066,6 +1305,8 @@ export function calculateCpuScore(
     randStdDev *= 0.90;
     randClamp *= 0.90;
   }
+  randStdDev *= profile.randomness;
+  randClamp *= profile.randomness;
 
   const rawNoise = fixedRand !== undefined 
     ? (fixedRand - 0.5) * 2.0 * randStdDev
@@ -1091,6 +1332,7 @@ export function calculateCpuScore(
       }
     }
   }
+  reachPenalty = reachPenalty / Math.max(0.25, profile.reachTolerance);
 
   // 10. Roster Penalty
   let rosterPenalty = 0;
@@ -1099,7 +1341,6 @@ export function calculateCpuScore(
   const isPitcher = player.isPitcher;
 
   const countC = cpuRoster.filter(p => p.positions.includes("C")).length;
-  const countRP = cpuRoster.filter(p => p.positions.includes("RP")).length;
   const countPitchers = cpuRoster.filter(p => p.isPitcher).length;
   const countBatters = cpuRoster.filter(p => !p.isPitcher).length;
 
@@ -1107,8 +1348,18 @@ export function calculateCpuScore(
     rosterPenalty += currentRound <= 20 ? 15.0 : 5.0;
   }
 
-  if (isRP && countRP >= 2 && currentRound <= 15) {
-    rosterPenalty += 10.0;
+  if (candidateIsCloser) {
+    if (countClosers >= closerPlan.max) {
+      rosterPenalty += 100.0;
+    } else if (hasSolvedSavesEarly) {
+      rosterPenalty += 45.0;
+    } else if (countClosers >= closerPlan.target) {
+      rosterPenalty += currentRound <= 15 ? 22.0 : 14.0;
+    } else if (countClosers >= 2) {
+      rosterPenalty += currentRound <= 15 ? 14.0 : 8.0;
+    }
+  } else if (isRP && countClosers >= closerPlan.target) {
+    rosterPenalty += 8.0;
   }
 
   if (!isPitcher && countBatters >= 11 && countPitchers <= 4 && currentRound <= 18) {
@@ -1132,14 +1383,27 @@ export function calculateCpuScore(
     const picksToMax = player.maxPick - pCurr;
     urgencyBonus += (11 - picksToMax) * 0.5;
   }
+  if (candidateIsCloser && (countClosers >= closerPlan.target || hasSolvedSavesEarly)) {
+    urgencyBonus *= 0.15;
+  }
 
   // 12. Saves Strategy Adjustment (for RPs)
   let savesStrategyBonus = 0;
   if (player.positions.includes("RP")) {
-    if (savesStrategy === "aggressive" && currentRound <= 12) {
-      savesStrategyBonus = 6.0;
-    } else if (savesStrategy === "wait" && currentRound <= 10) {
-      savesStrategyBonus = -6.0;
+    const projectedSaves = player.stats.SV || 0;
+    const isCloser = projectedSaves >= 12;
+    const closerQuality = Math.min(1.0, projectedSaves / 30.0);
+    const earlyRoundScale = currentRound <= 8 ? 1.0 : currentRound <= 14 ? 0.75 : 0.4;
+    const stillNeedsCloser = isCloser && countClosers < closerPlan.target && !hasSolvedSavesEarly;
+
+    if (effectiveSavesStrategy === "aggressive" && stillNeedsCloser) {
+      savesStrategyBonus = 4.0 * closerQuality * earlyRoundScale * profile.closerAggression;
+    } else if (effectiveSavesStrategy === "wait" && currentRound <= 10) {
+      savesStrategyBonus = -4.0 * profile.closerAggression;
+    } else if (effectiveSavesStrategy === "balanced" && stillNeedsCloser && currentRound >= 7 && currentRound <= 14) {
+      savesStrategyBonus = 1.5 * closerQuality * profile.closerAggression;
+    } else if (isCloser && countClosers >= closerPlan.target) {
+      savesStrategyBonus = -3.0 * profile.closerAggression;
     }
   }
 
