@@ -538,18 +538,6 @@ export default function DraftBoard({
                 <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
                   <span className={styles.draftSeqTeamName}>
                     {teamNames[pick.teamIndex]}
-                    {isUser && (
-                      <span
-                        style={{
-                          fontSize: "0.65rem",
-                          marginLeft: "4px",
-                          color: "var(--primary)",
-                          fontWeight: 700,
-                        }}
-                      >
-                        (YOU)
-                      </span>
-                    )}
                   </span>
                   {draftedPlayer ? (
                     <span
@@ -614,7 +602,7 @@ export default function DraftBoard({
       </div>
 
       {/* Fullscreen Grid Board Modal Popup */}
-      {isModalOpen && (
+      {typeof document !== "undefined" && isModalOpen && createPortal((
         <div 
           style={{
             position: "fixed",
@@ -799,7 +787,7 @@ export default function DraftBoard({
                             borderRight: isUser ? "2px solid rgba(99, 102, 241, 0.45)" : "none"
                           }}
                         >
-                          {name} {isUser && "(YOU)"}
+                          {name}
                         </th>
                       );
                     })}
@@ -974,10 +962,10 @@ export default function DraftBoard({
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       {/* Draft Log & Picker Debugger Modal */}
-      {isDebugModalOpen && (
+      {typeof document !== "undefined" && isDebugModalOpen && createPortal((
         <div 
           style={{
             position: "fixed",
@@ -1381,7 +1369,7 @@ export default function DraftBoard({
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       {typeof document !== "undefined" && isProfilesModalOpen && createPortal((
         <div

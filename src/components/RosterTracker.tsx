@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "../app/page.module.css";
-import { Player } from "../utils/sampleData";
+import { Player, PlayerStats } from "../utils/sampleData";
 
 interface RosterTrackerProps {
   teamIndex: number;
@@ -11,6 +12,9 @@ interface RosterTrackerProps {
   draftedPlayers: { player: Player; teamIndex: number }[];
   onSelectTeam: (index: number) => void;
   numRounds: number;
+  projectionOverrides?: Record<string, Partial<PlayerStats>>;
+  onUpdateProjectionOverride?: (playerId: string, stats: Partial<PlayerStats>) => void;
+  onResetProjectionOverride?: (playerId: string) => void;
   targets: {
     R: number;
     HR: number;
@@ -52,18 +56,116 @@ const ROSTER_SLOTS = [
   { label: "P", type: "pitcher", positions: ["SP", "RP"] },
 ];
 
+type RosterSlotDefinition = typeof ROSTER_SLOTS[number];
+type SlotAssignment = string | "bench";
+type EditableStatKey = keyof PlayerStats;
+
+const HITTER_PROJECTION_FIELDS: { key: EditableStatKey; label: string; step?: string }[] = [
+  { key: "AB", label: "AB" },
+  { key: "R", label: "R" },
+  { key: "HR", label: "HR" },
+  { key: "RBI", label: "RBI" },
+  { key: "SB", label: "SB" },
+  { key: "AVG", label: "AVG", step: "0.001" },
+];
+
+const PITCHER_PROJECTION_FIELDS: { key: EditableStatKey; label: string; step?: string }[] = [
+  { key: "IP", label: "IP", step: "0.1" },
+  { key: "W", label: "W" },
+  { key: "SV", label: "SV" },
+  { key: "SO", label: "SO" },
+  { key: "ERA", label: "ERA", step: "0.01" },
+  { key: "WHIP", label: "WHIP", step: "0.01" },
+];
+
+const canPlayerUseRosterSlot = (player: Player, slot: RosterSlotDefinition) => {
+  if (slot.type === "pitcher") return player.isPitcher;
+  if (player.isPitcher) return false;
+  if (player.positions.includes("C") && !slot.positions.includes("C")) return false;
+  return player.positions.some((position) => slot.positions.includes(position));
+};
+
+const SLOT_DISPLAY_LABELS = ROSTER_SLOTS.map((slot, index) => {
+  const matchingSlots = ROSTER_SLOTS
+    .slice(0, index + 1)
+    .filter((candidate) => candidate.label === slot.label).length;
+  const totalMatchingSlots = ROSTER_SLOTS.filter((candidate) => candidate.label === slot.label).length;
+
+  return totalMatchingSlots > 1 ? `${slot.label} ${matchingSlots}` : slot.label;
+});
+
 export default function RosterTracker({
   teamIndex,
   teamNames,
+  userTeamIndex,
   draftedPlayers,
   onSelectTeam,
   numRounds,
+  projectionOverrides = {},
+  onUpdateProjectionOverride,
+  onResetProjectionOverride,
   targets,
 }: RosterTrackerProps) {
+  const [slotAssignmentsByTeam, setSlotAssignmentsByTeam] = useState<Record<number, Record<string, SlotAssignment>>>({});
+  const [editingProjectionPlayerId, setEditingProjectionPlayerId] = useState<string | null>(null);
+  const [projectionDraft, setProjectionDraft] = useState<Partial<PlayerStats>>({});
+  const [scaleHittingStatsWithAB, setScaleHittingStatsWithAB] = useState(false);
+  const [hittingScaleBaseline, setHittingScaleBaseline] = useState<Partial<PlayerStats>>({});
+  const [scaleTargetAB, setScaleTargetAB] = useState("");
+
   // Get all players drafted by the currently selected team
-  const myDrafted = useMemo(() => {
+  const sourceDrafted = useMemo(() => {
     return draftedPlayers.filter((dp) => dp.teamIndex === teamIndex).map((dp) => dp.player);
   }, [draftedPlayers, teamIndex]);
+
+  const myDrafted = useMemo(() => {
+    if (teamIndex !== userTeamIndex) return sourceDrafted;
+
+    return sourceDrafted.map((player) => ({
+      ...player,
+      stats: {
+        ...player.stats,
+        ...(projectionOverrides[player.id] || {}),
+      },
+    }));
+  }, [sourceDrafted, teamIndex, userTeamIndex, projectionOverrides]);
+
+  const sourcePlayerMap = useMemo(
+    () => new Map(sourceDrafted.map((player) => [player.id, player])),
+    [sourceDrafted]
+  );
+
+  const editingProjectionPlayer = editingProjectionPlayerId
+    ? sourcePlayerMap.get(editingProjectionPlayerId) || null
+    : null;
+
+  const slotAssignments = slotAssignmentsByTeam[teamIndex] || {};
+
+  useEffect(() => {
+    const draftedIdsByTeam = draftedPlayers.reduce<Record<number, Set<string>>>((acc, draftedPlayer) => {
+      if (!acc[draftedPlayer.teamIndex]) acc[draftedPlayer.teamIndex] = new Set();
+      acc[draftedPlayer.teamIndex].add(draftedPlayer.player.id);
+      return acc;
+    }, {});
+
+    setSlotAssignmentsByTeam((current) => {
+      let changed = false;
+      const next: Record<number, Record<string, SlotAssignment>> = {};
+
+      Object.entries(current).forEach(([teamKey, assignments]) => {
+        const assignedTeamIndex = Number(teamKey);
+        const validPlayerIds = draftedIdsByTeam[assignedTeamIndex] || new Set<string>();
+        const validAssignments = Object.fromEntries(
+          Object.entries(assignments).filter(([playerId]) => validPlayerIds.has(playerId))
+        );
+
+        if (Object.keys(validAssignments).length !== Object.keys(assignments).length) changed = true;
+        if (Object.keys(validAssignments).length > 0) next[assignedTeamIndex] = validAssignments;
+      });
+
+      return changed ? next : current;
+    });
+  }, [draftedPlayers]);
 
   // Fit players into roster slots dynamically
   const roster = useMemo(() => {
@@ -77,12 +179,32 @@ export default function RosterTracker({
     }));
 
     const bench: Player[] = [];
-    
+    const manuallyBenched = new Set(
+      myDrafted
+        .filter((player) => slotAssignments[player.id] === "bench")
+        .map((player) => player.id)
+    );
+    const manuallyPlaced = new Set<string>();
+
+    myDrafted.forEach((player) => {
+      const assignedSlotId = slotAssignments[player.id];
+      if (!assignedSlotId || assignedSlotId === "bench") return;
+
+      const slot = slots.find((candidate) => candidate.id === assignedSlotId);
+      const slotDefinition = slot ? ROSTER_SLOTS[Number(slot.id.replace("slot-", ""))] : undefined;
+      if (slot && slotDefinition && !slot.player && canPlayerUseRosterSlot(player, slotDefinition)) {
+        slot.player = player;
+        manuallyPlaced.add(player.id);
+      }
+    });
+
     // Sort drafted players: active roster positions first, utility next
-    const unplaced = [...myDrafted];
+    const unplaced = myDrafted.filter(
+      (player) => !manuallyPlaced.has(player.id) && !manuallyBenched.has(player.id)
+    );
     const canPlayerUseSlot = (player: Player, slot: typeof slots[number]) => {
-      if (player.positions.includes("C") && !slot.positions.includes("C")) return false;
-      return player.positions.some(pos => slot.positions.includes(pos));
+      const slotIndex = Number(slot.id.replace("slot-", ""));
+      return canPlayerUseRosterSlot(player, ROSTER_SLOTS[slotIndex]);
     };
 
     // First pass: Fit players into their exact primary position slots (e.g. C to C, SS to SS)
@@ -156,7 +278,10 @@ export default function RosterTracker({
     }
 
     // Remaining players go to the bench
-    bench.push(...unplaced);
+    bench.push(
+      ...myDrafted.filter((player) => manuallyBenched.has(player.id)),
+      ...unplaced
+    );
 
     // Fill the bench slots up to the round count
     const numActiveSlots = slots.length;
@@ -173,7 +298,124 @@ export default function RosterTracker({
     }
 
     return { active: slots, bench: benchSlots };
-  }, [myDrafted, numRounds]);
+  }, [myDrafted, numRounds, slotAssignments]);
+
+  const movePlayer = (player: Player, destination: SlotAssignment) => {
+    if (teamIndex !== userTeamIndex) return;
+
+    const sourceSlot = roster.active.find((slot) => slot.player?.id === player.id);
+    const destinationSlot = destination === "bench"
+      ? null
+      : roster.active.find((slot) => slot.id === destination);
+    const displacedPlayer = destinationSlot?.player;
+
+    setSlotAssignmentsByTeam((current) => {
+      const teamAssignments = { ...(current[teamIndex] || {}) };
+      teamAssignments[player.id] = destination;
+
+      if (displacedPlayer && displacedPlayer.id !== player.id) {
+        const sourceSlotIndex = sourceSlot
+          ? Number(sourceSlot.id.replace("slot-", ""))
+          : -1;
+        const canSwapIntoSource =
+          sourceSlotIndex >= 0 &&
+          canPlayerUseRosterSlot(displacedPlayer, ROSTER_SLOTS[sourceSlotIndex]);
+
+        if (canSwapIntoSource) {
+          teamAssignments[displacedPlayer.id] = sourceSlot!.id;
+        } else {
+          delete teamAssignments[displacedPlayer.id];
+        }
+      }
+
+      return {
+        ...current,
+        [teamIndex]: teamAssignments,
+      };
+    });
+  };
+
+  const openProjectionEditor = (player: Player) => {
+    const sourcePlayer = sourcePlayerMap.get(player.id) || player;
+    setEditingProjectionPlayerId(player.id);
+    setProjectionDraft({
+      ...sourcePlayer.stats,
+      ...(projectionOverrides[player.id] || {}),
+    });
+    setScaleHittingStatsWithAB(false);
+    setHittingScaleBaseline({});
+    setScaleTargetAB("");
+  };
+
+  const closeProjectionEditor = () => {
+    setEditingProjectionPlayerId(null);
+    setProjectionDraft({});
+    setScaleHittingStatsWithAB(false);
+    setHittingScaleBaseline({});
+    setScaleTargetAB("");
+  };
+
+  const saveProjectionOverride = () => {
+    if (!editingProjectionPlayer || !onUpdateProjectionOverride) return;
+
+    const fields = editingProjectionPlayer.isPitcher
+      ? PITCHER_PROJECTION_FIELDS
+      : HITTER_PROJECTION_FIELDS;
+    const changedStats = fields.reduce<Partial<PlayerStats>>((acc, field) => {
+      const nextValue = projectionDraft[field.key];
+      const sourceValue = editingProjectionPlayer.stats[field.key];
+      if (nextValue !== undefined && nextValue !== sourceValue) {
+        acc[field.key] = nextValue;
+      }
+      return acc;
+    }, {});
+
+    if (Object.keys(changedStats).length > 0) {
+      onUpdateProjectionOverride(editingProjectionPlayer.id, changedStats);
+    } else {
+      onResetProjectionOverride?.(editingProjectionPlayer.id);
+    }
+    closeProjectionEditor();
+  };
+
+  const resetProjectionEditor = () => {
+    if (!editingProjectionPlayer) return;
+    onResetProjectionOverride?.(editingProjectionPlayer.id);
+    setProjectionDraft({ ...editingProjectionPlayer.stats });
+  };
+
+  const updateProjectionField = (field: EditableStatKey, value: number) => {
+    setProjectionDraft((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const setHittingScaleMode = (enabled: boolean) => {
+    setScaleHittingStatsWithAB(enabled);
+    if (enabled) {
+      setHittingScaleBaseline({ ...projectionDraft });
+      setScaleTargetAB(String(projectionDraft.AB ?? ""));
+    } else {
+      setHittingScaleBaseline({});
+      setScaleTargetAB("");
+    }
+  };
+
+  const applyHittingScale = () => {
+    const baselineAB = Number(hittingScaleBaseline.AB || 0);
+    const targetAB = Number(scaleTargetAB);
+    if (baselineAB <= 0 || targetAB <= 0) return;
+
+    const ratio = targetAB / baselineAB;
+    setProjectionDraft((current) => {
+      const scaled = { ...current, AB: targetAB };
+      (["R", "HR", "RBI", "SB"] as const).forEach((stat) => {
+        scaled[stat] = Math.round(Number(hittingScaleBaseline[stat] || 0) * ratio);
+      });
+      return scaled;
+    });
+  };
 
   // Calculate accumulated statistics
   const stats = useMemo(() => {
@@ -440,12 +682,56 @@ export default function RosterTracker({
                 <div key={slot.id} className={slotClass}>
                   <span className={styles.rosterSlotLabel}>{slot.label}</span>
                   {slot.player ? (
-                    <>
-                      <span className={styles.rosterPlayerName}>{slot.player.name}</span>
-                      <span className={styles.rosterPlayerValue}>
-                        ${slot.player.value.toFixed(1)}
-                      </span>
-                    </>
+                    <div className={styles.rosterPlayerContent}>
+                      <div className={styles.rosterPlayerTop}>
+                        <span className={styles.rosterPlayerName}>
+                          <span>{slot.player.name}</span>
+                          {slot.player.positions.length > 1 && (
+                            <span className={styles.rosterEligibility}>
+                              {slot.player.positions.join("/")}
+                            </span>
+                          )}
+                          {teamIndex === userTeamIndex && projectionOverrides[slot.player.id] && (
+                            <span className={styles.rosterCustomProjection}>Custom</span>
+                          )}
+                        </span>
+                        <span className={styles.rosterPlayerValue}>
+                          ${slot.player.value.toFixed(1)}
+                        </span>
+                      </div>
+                      {teamIndex === userTeamIndex && (
+                        <div className={styles.rosterPlayerControls}>
+                          <button
+                            type="button"
+                            className={styles.rosterProjectionButton}
+                            onClick={() => openProjectionEditor(slot.player!)}
+                            title={`Edit ${slot.player.name} projections`}
+                            aria-label={`Edit ${slot.player.name} projections`}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                            </svg>
+                          </button>
+                          <select
+                            className={styles.rosterSlotSelect}
+                            aria-label={`Move ${slot.player.name}`}
+                            value={slot.id}
+                            onChange={(event) => movePlayer(slot.player!, event.target.value as SlotAssignment)}
+                            title={`Move ${slot.player.name} to another eligible roster slot`}
+                          >
+                            {ROSTER_SLOTS.map((candidate, candidateIndex) => (
+                              canPlayerUseRosterSlot(slot.player!, candidate) ? (
+                                <option key={`slot-${candidateIndex}`} value={`slot-${candidateIndex}`}>
+                                  {SLOT_DISPLAY_LABELS[candidateIndex]}
+                                </option>
+                              ) : null
+                            ))}
+                            <option value="bench">BN</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <span style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontStyle: "italic" }}>
                       Empty
@@ -465,12 +751,56 @@ export default function RosterTracker({
                 <div key={slot.id} className={slotClass}>
                   <span className={styles.rosterSlotLabel} style={{ color: "var(--text-muted)" }}>{slot.label}</span>
                   {slot.player ? (
-                    <>
-                      <span className={styles.rosterPlayerName}>{slot.player.name}</span>
-                      <span className={styles.rosterPlayerValue}>
-                        ${slot.player.value.toFixed(1)}
-                      </span>
-                    </>
+                    <div className={styles.rosterPlayerContent}>
+                      <div className={styles.rosterPlayerTop}>
+                        <span className={styles.rosterPlayerName}>
+                          <span>{slot.player.name}</span>
+                          {slot.player.positions.length > 1 && (
+                            <span className={styles.rosterEligibility}>
+                              {slot.player.positions.join("/")}
+                            </span>
+                          )}
+                          {teamIndex === userTeamIndex && projectionOverrides[slot.player.id] && (
+                            <span className={styles.rosterCustomProjection}>Custom</span>
+                          )}
+                        </span>
+                        <span className={styles.rosterPlayerValue}>
+                          ${slot.player.value.toFixed(1)}
+                        </span>
+                      </div>
+                      {teamIndex === userTeamIndex && (
+                        <div className={styles.rosterPlayerControls}>
+                          <button
+                            type="button"
+                            className={styles.rosterProjectionButton}
+                            onClick={() => openProjectionEditor(slot.player!)}
+                            title={`Edit ${slot.player.name} projections`}
+                            aria-label={`Edit ${slot.player.name} projections`}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                            </svg>
+                          </button>
+                          <select
+                            className={styles.rosterSlotSelect}
+                            aria-label={`Move ${slot.player.name}`}
+                            value="bench"
+                            onChange={(event) => movePlayer(slot.player!, event.target.value as SlotAssignment)}
+                            title={`Move ${slot.player.name} to an eligible active roster slot`}
+                          >
+                            {ROSTER_SLOTS.map((candidate, candidateIndex) => (
+                              canPlayerUseRosterSlot(slot.player!, candidate) ? (
+                                <option key={`slot-${candidateIndex}`} value={`slot-${candidateIndex}`}>
+                                  {SLOT_DISPLAY_LABELS[candidateIndex]}
+                                </option>
+                              ) : null
+                            ))}
+                            <option value="bench">BN</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <span style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontStyle: "italic" }}>
                       Empty
@@ -482,6 +812,128 @@ export default function RosterTracker({
           </div>
         </div>
       </div>
+
+      {typeof document !== "undefined" && editingProjectionPlayer && createPortal((
+        <div className={styles.projectionEditorBackdrop} onClick={closeProjectionEditor}>
+          <div className={styles.projectionEditorModal} onClick={(event) => event.stopPropagation()}>
+            <div className={styles.projectionEditorHeader}>
+              <div>
+                <h3>Edit Projections</h3>
+                <p>
+                  {editingProjectionPlayer.name} | {editingProjectionPlayer.positions.join("/")}
+                </p>
+              </div>
+              <button type="button" onClick={closeProjectionEditor} aria-label="Close projection editor">
+                &times;
+              </button>
+            </div>
+
+            {!editingProjectionPlayer.isPitcher && (
+              <div className={styles.projectionScaleOption}>
+                <div>
+                  <strong>When AB changes</strong>
+                  <small>Scale mode adjusts R, HR, RBI, and SB. AVG stays unchanged.</small>
+                </div>
+                <div className={styles.projectionScaleModes}>
+                  <button
+                    type="button"
+                    data-active={!scaleHittingStatsWithAB}
+                    onClick={() => setHittingScaleMode(false)}
+                  >
+                    Independent
+                  </button>
+                  <button
+                    type="button"
+                    data-active={scaleHittingStatsWithAB}
+                    onClick={() => setHittingScaleMode(true)}
+                  >
+                    Scale stats
+                  </button>
+                </div>
+                {scaleHittingStatsWithAB && (
+                  <div className={styles.projectionScaleApply}>
+                    <label>
+                      Target AB
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={scaleTargetAB}
+                        onChange={(event) => setScaleTargetAB(event.target.value)}
+                      />
+                    </label>
+                    <button type="button" onClick={applyHittingScale}>
+                      Apply Scale
+                    </button>
+                    <span>
+                      {Number(hittingScaleBaseline.AB || 0).toFixed(0)} AB baseline
+                      {" -> "}
+                      {Number(scaleTargetAB || 0).toFixed(0)} AB
+                      {" ("}
+                      {Number(hittingScaleBaseline.AB || 0) > 0 && Number(scaleTargetAB) > 0
+                        ? `${(Number(scaleTargetAB) / Number(hittingScaleBaseline.AB || 1)).toFixed(2)}x`
+                        : "enter target"}
+                      {")"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className={styles.projectionEditorGrid}>
+              {(editingProjectionPlayer.isPitcher
+                ? PITCHER_PROJECTION_FIELDS
+                : HITTER_PROJECTION_FIELDS
+              ).map((field) => {
+                const sourceValue = editingProjectionPlayer.stats[field.key] ?? 0;
+                const currentValue = projectionDraft[field.key] ?? sourceValue;
+                const isChanged = currentValue !== sourceValue;
+
+                return (
+                  <label key={field.key} className={styles.projectionEditorField} data-changed={isChanged}>
+                    <span>
+                      {field.label}
+                      <small>Source {sourceValue}</small>
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step={field.step || "1"}
+                      value={currentValue}
+                      disabled={scaleHittingStatsWithAB && field.key === "AB"}
+                      onFocus={(event) => event.currentTarget.select()}
+                      onClick={(event) => event.currentTarget.select()}
+                      onChange={(event) => {
+                        const value = event.target.value === "" ? 0 : Number(event.target.value);
+                        updateProjectionField(field.key, value);
+                      }}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className={styles.projectionEditorActions}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={resetProjectionEditor}
+                disabled={!projectionOverrides[editingProjectionPlayer.id]}
+              >
+                Reset to Source
+              </button>
+              <div>
+                <button type="button" className="btn btn-secondary" onClick={closeProjectionEditor}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-primary" onClick={saveProjectionOverride}>
+                  Save Projections
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
     </div>
   );
 }

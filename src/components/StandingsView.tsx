@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import styles from "../app/page.module.css";
-import { Player } from "../utils/sampleData";
+import { Player, PlayerStats } from "../utils/sampleData";
 import { fitRoster } from "../utils/draftEngine";
 
 type CategoryKey = "R" | "HR" | "RBI" | "SB" | "AVG" | "W" | "SV" | "SO" | "ERA" | "WHIP";
@@ -13,6 +13,7 @@ interface StandingsViewProps {
   userTeamIndex: number;
   draftedPlayers: { player: Player; teamIndex: number }[];
   numRounds: number;
+  projectionOverrides?: Record<string, Partial<PlayerStats>>;
 }
 
 interface TeamStanding {
@@ -75,6 +76,7 @@ export default function StandingsView({
   userTeamIndex,
   draftedPlayers,
   numRounds,
+  projectionOverrides = {},
 }: StandingsViewProps) {
   const [sortKey, setSortKey] = useState<SortKey>("points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -83,7 +85,19 @@ export default function StandingsView({
     const rows: TeamStanding[] = teamNames.map((teamName, teamIndex) => {
       const roster = draftedPlayers
         .filter((drafted) => drafted.teamIndex === teamIndex)
-        .map((drafted) => drafted.player);
+        .map((drafted) => {
+          if (teamIndex !== userTeamIndex || !projectionOverrides[drafted.player.id]) {
+            return drafted.player;
+          }
+
+          return {
+            ...drafted.player,
+            stats: {
+              ...drafted.player.stats,
+              ...projectionOverrides[drafted.player.id],
+            },
+          };
+        });
       const starters = fitRoster(roster, numRounds).active;
 
       let R = 0;
@@ -211,7 +225,7 @@ export default function StandingsView({
       });
 
     return rows;
-  }, [teamNames, draftedPlayers, numRounds]);
+  }, [teamNames, draftedPlayers, numRounds, userTeamIndex, projectionOverrides]);
 
   const sortedStandings = useMemo(() => {
     return [...standings].sort((a, b) => {
@@ -242,6 +256,7 @@ export default function StandingsView({
     return sortDirection === "asc" ? " ▲" : " ▼";
   };
   const activeStarterCount = standings.reduce((sum, row) => sum + row.players, 0);
+  const hasCustomUserProjections = Object.keys(projectionOverrides).length > 0;
 
   return (
     <div className={styles.card}>
@@ -322,6 +337,11 @@ export default function StandingsView({
                   </td>
                   <td style={{ padding: "9px 10px", color: isUser ? "var(--primary)" : "var(--text-primary)", fontWeight: 800, whiteSpace: "nowrap" }}>
                     {row.teamName}
+                    {isUser && hasCustomUserProjections && (
+                      <span style={{ marginLeft: "6px", padding: "1px 4px", borderRadius: "4px", background: "rgba(245, 158, 11, 0.12)", color: "var(--warning)", fontSize: "0.56rem", textTransform: "uppercase" }}>
+                        Custom
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: "9px 10px", textAlign: "right", color: "var(--success)", fontFamily: "var(--font-mono)", fontWeight: 800 }}>
                     {row.points.toFixed(1)}

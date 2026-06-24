@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import styles from "./page.module.css";
-import { getMockPlayers, Player } from "../utils/sampleData";
+import { getMockPlayers, Player, PlayerStats } from "../utils/sampleData";
 import {
   generateDraftSequence,
   calculatePositionScarcity,
@@ -162,6 +162,7 @@ export default function Home() {
   const [cpuSavesStrategies, setCpuSavesStrategies] = useState<string[]>([]);
   const [cpuProfiles, setCpuProfiles] = useState<CpuProfile[]>([]);
   const [roundTargets, setRoundTargets] = useState<Record<number, { position: string | null; playerIds: string[] }>>({});
+  const [projectionOverrides, setProjectionOverrides] = useState<Record<string, Partial<PlayerStats>>>({});
   
   // Track which team's roster is currently selected in the sidebar
   const [rosterViewTeamIndex, setRosterViewTeamIndex] = useState(4); // default to user index (userPosition - 1)
@@ -293,6 +294,7 @@ export default function Home() {
     setIsDraftStarted(false);
     setRosterViewTeamIndex(userPos - 1);
     setRoundTargets({});
+    setProjectionOverrides({});
 
     const profiles = assignCpuProfiles(teamsCount, userPos);
     setCpuProfiles(profiles);
@@ -482,8 +484,29 @@ export default function Home() {
   const userDraftedPlayers = useMemo(() => {
     return draftedPlayersDetails
       .filter((d) => d.teamIndex === userPosition - 1)
-      .map((d) => d.player);
-  }, [draftedPlayersDetails, userPosition]);
+      .map((d) => ({
+        ...d.player,
+        stats: {
+          ...d.player.stats,
+          ...(projectionOverrides[d.player.id] || {}),
+        },
+      }));
+  }, [draftedPlayersDetails, userPosition, projectionOverrides]);
+
+  const updateProjectionOverride = useCallback((playerId: string, stats: Partial<PlayerStats>) => {
+    setProjectionOverrides((current) => ({
+      ...current,
+      [playerId]: stats,
+    }));
+  }, []);
+
+  const resetProjectionOverride = useCallback((playerId: string) => {
+    setProjectionOverrides((current) => {
+      const next = { ...current };
+      delete next[playerId];
+      return next;
+    });
+  }, []);
 
   // Calculate smart pick recommendations for the user
   const recommendations = useMemo(() => {
@@ -1046,6 +1069,7 @@ export default function Home() {
             userTeamIndex={userPosition - 1}
             draftedPlayers={draftedPlayersDetails}
             numRounds={numRounds}
+            projectionOverrides={projectionOverrides}
           />
           <PlayerList
             availablePlayers={availablePlayers}
@@ -1078,6 +1102,9 @@ export default function Home() {
             onSelectTeam={setRosterViewTeamIndex}
             numRounds={numRounds}
             targets={targets}
+            projectionOverrides={projectionOverrides}
+            onUpdateProjectionOverride={updateProjectionOverride}
+            onResetProjectionOverride={resetProjectionOverride}
           />
         </section>
       </main>

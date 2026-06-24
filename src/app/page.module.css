@@ -848,24 +848,417 @@
 }
 
 .rosterSlotFilled {
+  align-items: flex-start;
+  min-height: 72px;
   background: rgba(6, 182, 212, 0.03);
   border-color: rgba(6, 182, 212, 0.15);
 }
 
 .rosterSlotLabel {
+  flex: none;
   font-weight: 700;
   color: var(--text-secondary);
   width: 45px;
+  padding-top: 4px;
+}
+
+.rosterPlayerContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rosterPlayerTop {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .rosterPlayerName {
   font-weight: 600;
   color: var(--text-primary);
   flex-grow: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.rosterPlayerName > span:first-child {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 0 8px;
+}
+
+.rosterEligibility {
+  flex: none;
+  padding: 1px 4px;
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text-secondary);
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.rosterCustomProjection {
+  flex: none;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warning);
+  font-size: 0.56rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.rosterProjectionButton {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 1px solid var(--border-muted);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.rosterProjectionButton:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.rosterPlayerControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rosterSlotSelect {
+  min-width: 104px;
+  max-width: 160px;
+  height: 27px;
+  padding: 3px 7px;
+  border: 1px solid var(--border-muted);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.projectionEditorBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(8, 11, 17, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.projectionEditorModal {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #111827;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.projectionEditorHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.projectionEditorHeader h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.projectionEditorHeader p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.projectionEditorHeader > button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.projectionScaleOption {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border-muted);
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.projectionScaleOption > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.projectionScaleOption strong {
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.projectionScaleOption small {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 500;
+}
+
+.projectionScaleModes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(100%, 420px);
+  min-width: 0;
+  align-self: flex-start;
+  padding: 3px;
+  border: 1px solid var(--border-muted);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.projectionScaleModes button {
+  border: 0;
+  border-radius: 4px;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.projectionScaleModes button[data-active="true"] {
+  background: var(--primary);
+  color: #fff;
+}
+
+.projectionScaleApply {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.projectionScaleApply label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-secondary);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.projectionScaleApply input {
+  width: 100%;
+  padding: 6px 7px;
+  border: 1px solid var(--border-muted);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.projectionScaleApply button {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 5px;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.projectionScaleApply > span {
+  align-self: center;
+  min-width: 0;
+  color: var(--warning);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.projectionEditorGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.projectionEditorField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border-muted);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.projectionEditorField[data-changed="true"] {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.projectionEditorField > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.projectionEditorField small {
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+.projectionEditorField input {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--border-muted);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.projectionEditorField input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.projectionEditorActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.projectionEditorActions > div {
+  display: flex;
+  gap: 8px;
+}
+
+.projectionEditorActions button {
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+  .projectionScaleApply {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .projectionScaleApply > span {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+
+  .projectionEditorGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .projectionEditorBackdrop {
+    padding: 12px;
+  }
+
+  .projectionEditorModal {
+    max-height: calc(100vh - 24px);
+    padding: 16px;
+  }
+
+  .projectionEditorGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .projectionEditorActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .projectionEditorActions > div {
+    display: flex;
+  }
+
+  .projectionEditorActions button {
+    width: auto;
+  }
+}
+
+@media (max-width: 440px) {
+  .projectionEditorActions {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .projectionEditorActions > div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .projectionEditorActions button {
+    width: 100%;
+  }
 }
 
 .rosterPlayerValue {
