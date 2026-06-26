@@ -14,7 +14,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "DraftRadar // Fantasy Baseball Snake Draft Assistant",
-  description: "Next-gen fantasy baseball snake draft simulator with real-time position scarcity VBD analysis and truncated normal return probabilities.",
+  description: "Next-gen fantasy baseball snake draft simulator with real-time position pressure, category fit, and return probabilities.",
 };
 
 export default function RootLayout({

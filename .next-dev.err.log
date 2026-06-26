@@ -1,0 +1,2314 @@
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[browser] Uncaught TypeError: Cannot read properties of undefined (reading 'toFixed')
+    at <unknown> (src/components/DashboardSummary.tsx:869:95)
+    at Array.map (<anonymous>)
+    at DashboardSummary (src/components/DashboardSummary.tsx:739:40)
+    at Home (src/app/page.tsx:1074:11)
+  867 | ...
+  868 | ...kupColor, fontWeight: 700 }}>
+> 869 | ...o.backupPlanLevel)} ({info.backupPlanScore.toFixed(1)} likely options)
+      |                                               ^
+  870 | ...
+  871 | ...
+  872 | ...ooltipFooterRow} ${styles.tooltipFooterTotal}`}>
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⨯ ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  [90m873 |[0m       {showRecommendationCard && (
+  [90m874 |[0m       {[90m/* Recommended Picks Card */[0m}
+[31m[1m>[0m [90m875 |[0m       <div className={styles.card}>
+  [90m    |[0m            [31m[1m^^^^^^^^^[0m
+  [90m876 |[0m         <div className={styles.cardHeader}>
+  [90m877 |[0m           <h3 className={styles.cardTitle}>
+  [90m878 |[0m             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+⨯ ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  [90m873 |[0m       {showRecommendationCard && (
+  [90m874 |[0m       {[90m/* Recommended Picks Card */[0m}
+[31m[1m>[0m [90m875 |[0m       <div className={styles.card}>
+  [90m    |[0m            [31m[1m^^^^^^^^^[0m
+  [90m876 |[0m         <div className={styles.cardHeader}>
+  [90m877 |[0m           <h3 className={styles.cardTitle}>
+  [90m878 |[0m             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+⨯ ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  [90m873 |[0m       {showRecommendationCard && (
+  [90m874 |[0m       {[90m/* Recommended Picks Card */[0m}
+[31m[1m>[0m [90m875 |[0m       <div className={styles.card}>
+  [90m    |[0m            [31m[1m^^^^^^^^^[0m
+  [90m876 |[0m         <div className={styles.cardHeader}>
+  [90m877 |[0m           <h3 className={styles.cardTitle}>
+  [90m878 |[0m             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+⨯ ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  [90m873 |[0m       {showRecommendationCard && (
+  [90m874 |[0m       {[90m/* Recommended Picks Card */[0m}
+[31m[1m>[0m [90m875 |[0m       <div className={styles.card}>
+  [90m    |[0m            [31m[1m^^^^^^^^^[0m
+  [90m876 |[0m         <div className={styles.cardHeader}>
+  [90m877 |[0m           <h3 className={styles.cardTitle}>
+  [90m878 |[0m             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+[browser] Uncaught Error: ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./src/components/DashboardSummary.tsx:875:12)
+    at <unknown> (Error: (./src/components/DashboardSummary.tsx:875:12)
+[browser] Uncaught Error: ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./src/components/DashboardSummary.tsx:875:12)
+    at <unknown> (Error: (./src/components/DashboardSummary.tsx:875:12)
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+⨯ ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  [90m873 |[0m       {showRecommendationCard && (
+  [90m874 |[0m       {[90m/* Recommended Picks Card */[0m}
+[31m[1m>[0m [90m875 |[0m       <div className={styles.card}>
+  [90m    |[0m            [31m[1m^^^^^^^^^[0m
+  [90m876 |[0m         <div className={styles.cardHeader}>
+  [90m877 |[0m           <h3 className={styles.cardTitle}>
+  [90m878 |[0m             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+⨯ ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  [90m873 |[0m       {showRecommendationCard && (
+  [90m874 |[0m       {[90m/* Recommended Picks Card */[0m}
+[31m[1m>[0m [90m875 |[0m       <div className={styles.card}>
+  [90m    |[0m            [31m[1m^^^^^^^^^[0m
+  [90m876 |[0m         <div className={styles.cardHeader}>
+  [90m877 |[0m           <h3 className={styles.cardTitle}>
+  [90m878 |[0m             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+[browser] Uncaught Error: ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./src/components/DashboardSummary.tsx:875:12)
+    at <unknown> (Error: (./src/components/DashboardSummary.tsx:875:12)
+[browser] Uncaught Error: ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./src/components/DashboardSummary.tsx:875:12)
+    at <unknown> (Error: (./src/components/DashboardSummary.tsx:875:12)
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+⨯ ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  [90m873 |[0m       {showRecommendationCard && (
+  [90m874 |[0m       {[90m/* Recommended Picks Card */[0m}
+[31m[1m>[0m [90m875 |[0m       <div className={styles.card}>
+  [90m    |[0m            [31m[1m^^^^^^^^^[0m
+  [90m876 |[0m         <div className={styles.cardHeader}>
+  [90m877 |[0m           <h3 className={styles.cardTitle}>
+  [90m878 |[0m             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+⨯ ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  [90m873 |[0m       {showRecommendationCard && (
+  [90m874 |[0m       {[90m/* Recommended Picks Card */[0m}
+[31m[1m>[0m [90m875 |[0m       <div className={styles.card}>
+  [90m    |[0m            [31m[1m^^^^^^^^^[0m
+  [90m876 |[0m         <div className={styles.cardHeader}>
+  [90m877 |[0m           <h3 className={styles.cardTitle}>
+  [90m878 |[0m             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+[browser] Uncaught Error: ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./src/components/DashboardSummary.tsx:875:12)
+    at <unknown> (Error: (./src/components/DashboardSummary.tsx:875:12)
+[browser] Uncaught Error: ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./src/components/DashboardSummary.tsx:875:12)
+    at <unknown> (Error: (./src/components/DashboardSummary.tsx:875:12)
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] ./src/components/DashboardSummary.tsx:875:12
+Expected '</', got 'ident'
+  873 |       {showRecommendationCard && (
+  874 |       {/* Recommended Picks Card */}
+> 875 |       <div className={styles.card}>
+      |            ^^^^^^^^^
+  876 |         <div className={styles.cardHeader}>
+  877 |           <h3 className={styles.cardTitle}>
+  878 |             <svg
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/components/DashboardSummary.tsx [Client Component Browser]
+    ./src/app/page.tsx [Client Component Browser]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/DashboardSummary.tsx [Client Component SSR]
+    ./src/app/page.tsx [Client Component SSR]
+    ./src/app/page.tsx [Server Component] 
+[browser] Uncaught ReferenceError: Cannot access 'draftCapital' before initialization
+    at RosterTracker.useMemo[draftCapital].pct (src/components/RosterTracker.tsx:167:36)
+    at RosterTracker.useMemo[draftCapital] (src/components/RosterTracker.tsx:168:24)
+    at RosterTracker (src/components/RosterTracker.tsx:142:31)
+    at Home (src/app/page.tsx:1177:49)
+  165 |     );
+  166 |
+> 167 |     const pct = (value: number) => draftCapital.total > 0 ? Math.round((value / draftCapi...
+      |                                    ^
+  168 |     const pitcherPct = pct(buckets.sp + buckets.rp);
+  169 |     const hitterPct = pct(buckets.hitters);
+  170 |     const spPct = pct(buckets.sp);
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.

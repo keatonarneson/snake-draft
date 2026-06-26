@@ -13,6 +13,8 @@ import {
   calculateCpuScore,
   calculateAdpValue,
   calculateTargetMetrics,
+  calculateCategoryNeeds,
+  CategoryNeeds,
   getCpuArchetype,
   getCpuProfile,
   getCpuProfileTemplates,
@@ -40,6 +42,8 @@ interface SandboxPreset {
 }
 
 type CpuProfileMode = "fixed" | "random";
+type MobileSection = "setup" | "draft" | "roster";
+type CenterView = "draft" | "plan" | "standings";
 
 const PRESETS: Record<string, SandboxPreset> = {
   balanced: {
@@ -163,6 +167,8 @@ export default function Home() {
   const [cpuProfiles, setCpuProfiles] = useState<CpuProfile[]>([]);
   const [roundTargets, setRoundTargets] = useState<Record<number, { position: string | null; playerIds: string[] }>>({});
   const [projectionOverrides, setProjectionOverrides] = useState<Record<string, Partial<PlayerStats>>>({});
+  const [activeMobileSection, setActiveMobileSection] = useState<MobileSection>("draft");
+  const [activeCenterView, setActiveCenterView] = useState<CenterView>("draft");
   
   // Track which team's roster is currently selected in the sidebar
   const [rosterViewTeamIndex, setRosterViewTeamIndex] = useState(4); // default to user index (userPosition - 1)
@@ -492,6 +498,10 @@ export default function Home() {
         },
       }));
   }, [draftedPlayersDetails, userPosition, projectionOverrides]);
+
+  const userCategoryNeeds: CategoryNeeds = useMemo(() => {
+    return calculateCategoryNeeds(userDraftedPlayers, numRounds, targets);
+  }, [userDraftedPlayers, numRounds, targets]);
 
   const updateProjectionOverride = useCallback((playerId: string, stats: Partial<PlayerStats>) => {
     setProjectionOverrides((current) => ({
@@ -1002,10 +1012,30 @@ export default function Home() {
         </div>
       </header>
 
+      <nav className={styles.mobileSectionTabs} aria-label="Mobile dashboard sections" role="tablist">
+        {[
+          { id: "setup" as const, label: "Setup" },
+          { id: "draft" as const, label: "Draft" },
+          { id: "roster" as const, label: "Roster" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={styles.mobileSectionTab}
+            data-active={activeMobileSection === tab.id}
+            role="tab"
+            aria-selected={activeMobileSection === tab.id}
+            onClick={() => setActiveMobileSection(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
       {/* Grid Layout */}
       <main className={styles.dashboardGrid}>
         {/* Left Column: Settings and Draft Queue */}
-        <section className={styles.settingsSidebar}>
+        <section className={styles.settingsSidebar} data-mobile-active={activeMobileSection === "setup"}>
           <SettingsPanel
             numTeams={numTeams}
             userPosition={userPosition}
@@ -1048,52 +1078,103 @@ export default function Home() {
         </section>
 
         {/* Center Column: Recommendations and Main Player Pool */}
-        <section className={styles.mainSection}>
-          <DashboardSummary
-            recommendations={recommendations}
-            scarcityMap={positionScarcity}
-            onDraftPlayer={draftPlayer}
-            isOnClock={isDraftStarted && isUserTurn}
-            roundTargets={roundTargets}
-            onSetRoundPositionTarget={setRoundPositionTarget}
-            onMoveTargetPlayer={moveTargetPlayer}
-            onToggleTargetPlayer={toggleTargetPlayer}
-            onAddTargetPlayerToRound={addTargetPlayerToRound}
-            userPicks={userPicks}
-            draftedPlayerIds={draftedPlayerIds}
-            currentPickIndex={currentPickIndex}
-            allPlayers={players}
-          />
-          <StandingsView
-            teamNames={teamNames}
-            userTeamIndex={userPosition - 1}
-            draftedPlayers={draftedPlayersDetails}
-            numRounds={numRounds}
-            projectionOverrides={projectionOverrides}
-          />
-          <PlayerList
-            availablePlayers={availablePlayers}
-            draftedPlayers={draftedPlayersDetails}
-            recommendations={recommendations}
-            onDraftPlayer={draftPlayer}
-            isOnClock={isDraftStarted && isUserTurn}
-            currentTeamName={isDraftComplete || !isDraftStarted ? "" : teamNames[currentPick.teamIndex]}
-            currentPickIndex={currentPickIndex}
-            currentTeamIndex={isDraftComplete || !isDraftStarted ? undefined : currentPick.teamIndex}
-            numRounds={numRounds}
-            isDraftStarted={isDraftStarted}
-            isDraftComplete={isDraftComplete}
-            roundTargets={roundTargets}
-            onToggleTargetPlayer={toggleTargetPlayer}
-            picks={picks}
-            userTeamIndex={userPosition - 1}
-            cpuSavesStrategies={cpuSavesStrategies}
-            cpuProfiles={cpuProfiles}
-          />
+        <section className={styles.mainSection} data-mobile-active={activeMobileSection === "draft"}>
+          <nav className={styles.centerViewTabs} aria-label="Draft workspace views" role="tablist">
+            {[
+              { id: "draft" as const, label: "Draft" },
+              { id: "plan" as const, label: "Plan" },
+              { id: "standings" as const, label: "Standings" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={styles.centerViewTab}
+                data-active={activeCenterView === tab.id}
+                role="tab"
+                aria-selected={activeCenterView === tab.id}
+                onClick={() => setActiveCenterView(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+
+          {activeCenterView === "draft" && (
+            <>
+              <DashboardSummary
+                displayMode="draft"
+                recommendations={recommendations}
+                scarcityMap={positionScarcity}
+                onDraftPlayer={draftPlayer}
+                isOnClock={isDraftStarted && isUserTurn}
+                roundTargets={roundTargets}
+                onSetRoundPositionTarget={setRoundPositionTarget}
+                onMoveTargetPlayer={moveTargetPlayer}
+                onToggleTargetPlayer={toggleTargetPlayer}
+                onAddTargetPlayerToRound={addTargetPlayerToRound}
+                userPicks={userPicks}
+                draftedPlayerIds={draftedPlayerIds}
+                currentPickIndex={currentPickIndex}
+                allPlayers={players}
+                categoryNeeds={userCategoryNeeds}
+                userRosterSize={userDraftedPlayers.length}
+              />
+              <PlayerList
+                availablePlayers={availablePlayers}
+                draftedPlayers={draftedPlayersDetails}
+                recommendations={recommendations}
+                onDraftPlayer={draftPlayer}
+                isOnClock={isDraftStarted && isUserTurn}
+                currentTeamName={isDraftComplete || !isDraftStarted ? "" : teamNames[currentPick.teamIndex]}
+                currentPickIndex={currentPickIndex}
+                currentTeamIndex={isDraftComplete || !isDraftStarted ? undefined : currentPick.teamIndex}
+                numRounds={numRounds}
+                isDraftStarted={isDraftStarted}
+                isDraftComplete={isDraftComplete}
+                roundTargets={roundTargets}
+                onToggleTargetPlayer={toggleTargetPlayer}
+                picks={picks}
+                userTeamIndex={userPosition - 1}
+                cpuSavesStrategies={cpuSavesStrategies}
+                cpuProfiles={cpuProfiles}
+              />
+            </>
+          )}
+
+          {activeCenterView === "plan" && (
+            <DashboardSummary
+              displayMode="plan"
+              recommendations={recommendations}
+              scarcityMap={positionScarcity}
+              onDraftPlayer={draftPlayer}
+              isOnClock={isDraftStarted && isUserTurn}
+              roundTargets={roundTargets}
+              onSetRoundPositionTarget={setRoundPositionTarget}
+              onMoveTargetPlayer={moveTargetPlayer}
+              onToggleTargetPlayer={toggleTargetPlayer}
+              onAddTargetPlayerToRound={addTargetPlayerToRound}
+              userPicks={userPicks}
+              draftedPlayerIds={draftedPlayerIds}
+              currentPickIndex={currentPickIndex}
+              allPlayers={players}
+              categoryNeeds={userCategoryNeeds}
+              userRosterSize={userDraftedPlayers.length}
+            />
+          )}
+
+          {activeCenterView === "standings" && (
+            <StandingsView
+              teamNames={teamNames}
+              userTeamIndex={userPosition - 1}
+              draftedPlayers={draftedPlayersDetails}
+              numRounds={numRounds}
+              projectionOverrides={projectionOverrides}
+            />
+          )}
         </section>
 
         {/* Right Column: Roster Tracker */}
-        <section className={styles.rosterSidebar}>
+        <section className={styles.rosterSidebar} data-mobile-active={activeMobileSection === "roster"}>
           <RosterTracker
             teamIndex={rosterViewTeamIndex}
             teamNames={teamNames}

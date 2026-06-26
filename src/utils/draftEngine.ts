@@ -378,14 +378,25 @@ export interface ScarcityPlayerInfo {
   pReturn: number;
 }
 
+export interface MarketPressurePlayerInfo {
+  name: string;
+  adp: number;
+  pReturn: number;
+}
+
 export interface ScarcityInfo {
   position: string;
   bestValueNow: number;
   expectedBestValueNext: number;
+  valueDropOff: number;
   dropOff: number;
   remainingCount: number;
   bestPlayerNow?: { name: string; value: number };
   expectedPlayersNext?: ScarcityPlayerInfo[];
+  marketPressureScore: number;
+  marketPressureLevel: "low" | "medium" | "high";
+  marketPlayersAtRisk: number;
+  marketWatchlist?: MarketPressurePlayerInfo[];
   replacementValue: number;
   scarcityPressure: number;
   positionRankPremium: number;
@@ -393,14 +404,14 @@ export interface ScarcityInfo {
 }
 
 export const POSITION_SLOTS: Record<string, number> = {
-  C: 1.5,
+  C: 2.0,
   "1B": 1.5,
   "2B": 1.5,
   "3B": 1.5,
   SS: 1.5,
-  OF: 6.0,
-  SP: 7.0,
-  RP: 5.0,
+  OF: 5.75,
+  SP: 6.5,
+  RP: 2.5,
 };
 
 /*
@@ -437,13 +448,6 @@ const ACTIVE_SLOTS = [
   { label: "P9", isPitcher: true, positions: ["SP", "RP"] },
 ];
 
-/**
- * Returns the total number of roster slots that accept a given position.
- */
-function getTotalSlotsForPosition(pos: string): number {
-  return ACTIVE_SLOTS.filter((slot) => slot.positions.includes(pos)).length;
-}
-
 export function calculatePositionScarcity(
   allPlayers: Player[],
   availablePlayers: Player[],
@@ -456,14 +460,19 @@ export function calculatePositionScarcity(
 
   const scarcity: Record<string, ScarcityInfo> = {};
 
+  const matchesScarcityPosition = (player: Player, pos: string) => {
+    if (!player.positions.includes(pos)) return false;
+    return pos !== "RP" || isDraftableCloser(player);
+  };
+
   positions.forEach((pos) => {
     const posPlayers = availablePlayers
-      .filter((p) => p.positions.includes(pos))
+      .filter((p) => matchesScarcityPosition(p, pos))
       .sort((a, b) => b.value - a.value);
 
     // Calculate replacement value dynamically based on all league players of this position
     const allPosPlayers = allPlayers
-      .filter((p) => p.positions.includes(pos))
+      .filter((p) => matchesScarcityPosition(p, pos))
       .sort((a, b) => b.value - a.value);
 
     const slots = POSITION_SLOTS[pos] || 1;
@@ -479,8 +488,13 @@ export function calculatePositionScarcity(
         position: pos,
         bestValueNow: -10,
         expectedBestValueNext: -10,
+        valueDropOff: 0,
         dropOff: 0,
         remainingCount: 0,
+        marketPressureScore: 0,
+        marketPressureLevel: "low",
+        marketPlayersAtRisk: 0,
+        marketWatchlist: [],
         replacementValue,
         scarcityPressure: 0.5,
         positionRankPremium: 0,
@@ -552,15 +566,39 @@ export function calculatePositionScarcity(
 
     // Combined dropOff for the best player at this position (qualityWeight = 1.0)
     const dropOff = valueDropOff + positionRankPremium;
-
+    const marketCandidates = posPlayers
+      .filter((p) => p.value >= replacementValue)
+      .sort((a, b) => a.adp - b.adp)
+      .slice(0, 8);
+    const marketPlayersAtRisk = marketCandidates.reduce((sum, player) => {
+      return sum + (1.0 - calculateReturnProbability(pCurr, pNext, player));
+    }, 0);
+    const marketWatchlist = marketCandidates.slice(0, 4).map((player) => ({
+      name: player.name,
+      adp: player.adp,
+      pReturn: calculateReturnProbability(pCurr, pNext, player),
+    }));
+    const marketPressureScore = Math.min(3.0, marketPlayersAtRisk);
+    const topMarketReturn = marketWatchlist[0]?.pReturn ?? 1.0;
+    const marketPressureLevel =
+      marketPlayersAtRisk >= 2.25 || topMarketReturn < 0.25
+        ? "high"
+        : marketPlayersAtRisk >= 1.0 || topMarketReturn < 0.55
+          ? "medium"
+          : "low";
     scarcity[pos] = {
       position: pos,
       bestValueNow,
       expectedBestValueNext,
+      valueDropOff,
       dropOff,
       remainingCount: posPlayers.length,
       bestPlayerNow,
       expectedPlayersNext,
+      marketPressureScore,
+      marketPressureLevel,
+      marketPlayersAtRisk,
+      marketWatchlist,
       replacementValue,
       scarcityPressure,
       positionRankPremium,

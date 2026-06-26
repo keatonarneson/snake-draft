@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import styles from "../app/page.module.css";
-import { Recommendation, ScarcityInfo, calculateTargetMetrics, DraftPick } from "../utils/draftEngine";
+import { CategoryNeeds, Recommendation, ScarcityInfo, calculateTargetMetrics, DraftPick } from "../utils/draftEngine";
 import { Player } from "../utils/sampleData";
 
 type RecommendationFocus =
@@ -13,6 +13,7 @@ type RecommendationFocus =
   | `category:${string}`;
 
 type RecommendationDecision = "draft" | "consider" | "wait";
+type DashboardSummaryMode = "all" | "draft" | "plan";
 
 const POSITION_FOCUSES = ["C", "1B", "2B", "3B", "SS", "OF", "SP", "RP"];
 const HITTING_CATEGORY_FOCUSES = ["R", "HR", "RBI", "SB", "AVG"];
@@ -32,6 +33,9 @@ interface DashboardSummaryProps {
   draftedPlayerIds?: Set<string>;
   currentPickIndex?: number;
   allPlayers?: Player[];
+  displayMode?: DashboardSummaryMode;
+  categoryNeeds?: CategoryNeeds;
+  userRosterSize?: number;
 }
 
 export default function DashboardSummary({
@@ -48,6 +52,9 @@ export default function DashboardSummary({
   draftedPlayerIds = new Set(),
   currentPickIndex = 0,
   allPlayers = [],
+  displayMode = "all",
+  categoryNeeds,
+  userRosterSize = 0,
 }: DashboardSummaryProps) {
   const [recommendationFocus, setRecommendationFocus] = useState<RecommendationFocus>("all");
 
@@ -177,6 +184,25 @@ export default function DashboardSummary({
         .filter((recommendation) => !focusedRecommendations.some((focused) => focused.player.id === recommendation.player.id))
         .slice(0, 2);
 
+  const categoryNeedSummary = useMemo(() => {
+    if (!categoryNeeds || userRosterSize === 0) return [];
+
+    const categories = [
+      ...HITTING_CATEGORY_FOCUSES.map((category) => ({ category, group: "Hit" as const })),
+      ...PITCHING_CATEGORY_FOCUSES.map((category) => ({ category, group: "Pit" as const })),
+    ];
+
+    return categories
+      .map(({ category, group }) => ({
+        category,
+        group,
+        need: categoryNeeds[category as keyof CategoryNeeds],
+      }))
+      .filter((item) => item.need > 0.15)
+      .sort((a, b) => b.need - a.need)
+      .slice(0, 6);
+  }, [categoryNeeds, userRosterSize]);
+
   const targetBoardData = useMemo(() => {
     const futureUserPicks = userPicks.filter((p) => p.overallPick >= currentPickIndex + 1);
     const nextUserPicks = futureUserPicks.slice(0, 4);
@@ -247,16 +273,40 @@ export default function DashboardSummary({
     });
   }, [userPicks, currentPickIndex, roundTargets, allPlayers, draftedPlayerIds, recommendations]);
 
-  const getScarcityLevel = (dropOff: number) => {
-    if (dropOff >= 5.0) return "high";
-    if (dropOff >= 1.5) return "med";
+  const getScarcityLevel = (pressureScore: number) => {
+    if (pressureScore >= 5.0) return "high";
+    if (pressureScore >= 1.5) return "med";
     return "low";
+  };
+
+  const getMarketLevelColor = (level: "low" | "medium" | "high") => {
+    if (level === "high") return "var(--danger)";
+    if (level === "medium") return "var(--warning)";
+    return "var(--success)";
+  };
+
+  const getMarketLevelLabel = (level: "low" | "medium" | "high") => {
+    if (level === "high") return "High";
+    if (level === "medium") return "Medium";
+    return "Low";
   };
 
   const getReturnLevel = (p: number) => {
     if (p >= 0.70) return "high";
     if (p >= 0.30) return "med";
     return "low";
+  };
+
+  const getCategoryNeedLabel = (need: number) => {
+    if (need >= 1.0) return "High";
+    if (need >= 0.45) return "Medium";
+    return "Light";
+  };
+
+  const getCategoryNeedColor = (need: number) => {
+    if (need >= 1.0) return "var(--danger)";
+    if (need >= 0.45) return "var(--warning)";
+    return "var(--secondary)";
   };
 
   const formatPercent = (p: number) => {
@@ -344,8 +394,13 @@ export default function DashboardSummary({
     return Math.round(Number(value || 0)).toString();
   }
 
+  const showPlanCards = displayMode === "all" || displayMode === "plan";
+  const showRecommendationCard = displayMode === "all" || displayMode === "draft";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      {showPlanCards && (
+        <>
       {/* Target Board Card */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
@@ -685,7 +740,7 @@ export default function DashboardSummary({
         )}
       </div>
 
-      {/* Position Scarcity Card */}
+      {/* Position Pressure Card */}
       <div className={styles.card}>
         <div className={styles.cardHeader}>
           <h3 className={styles.cardTitle}>
@@ -703,17 +758,18 @@ export default function DashboardSummary({
               <line x1="12" y1="20" x2="12" y2="4" />
               <line x1="6" y1="20" x2="6" y2="14" />
             </svg>
-            Position Scarcity (VBD Drop-off)
+            Position Pressure
           </h3>
         </div>
         
         <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "-6px" }}>
-          Expected drop in player value ($) if you wait on this position until your next pick.
+          Separates projection value loss from ADP market pressure. RP pressure only counts save sources.
         </p>
 
         <div className={styles.scarcityGrid}>
           {Object.entries(scarcityMap).map(([pos, info], index) => {
-            const level = getScarcityLevel(info.dropOff);
+            const valueLevel = getScarcityLevel(info.valueDropOff);
+            const marketColor = getMarketLevelColor(info.marketPressureLevel);
             const totalItems = Object.keys(scarcityMap).length;
             const isLeft = index <= 1;
             const isRight = index >= totalItems - 2;
@@ -727,7 +783,7 @@ export default function DashboardSummary({
               <div 
                 key={pos} 
                 className={styles.scarcityItem} 
-                data-scarcity={level} 
+                data-scarcity={valueLevel}
                 style={{ cursor: "help" }}
               >
                 <span className={styles.scarcityPos}>{pos}</span>
@@ -735,23 +791,27 @@ export default function DashboardSummary({
                   className={styles.scarcityDropoff}
                   style={{
                     color:
-                      level === "high"
+                      valueLevel === "high"
                         ? "var(--danger)"
-                        : level === "med"
+                        : valueLevel === "med"
                         ? "var(--warning)"
                         : "var(--success)",
                   }}
                 >
-                  ${info.dropOff.toFixed(1)}
-                  <span className={styles.scarcityDropoffUnit}> drop</span>
+                  ${info.valueDropOff.toFixed(1)}
+                  <span className={styles.scarcityDropoffUnit}> value</span>
                 </span>
-                <span className={styles.scarcityCount}>{info.remainingCount} left</span>
+                <span className={styles.scarcityCount}>
+                  Market: <span style={{ color: marketColor, fontWeight: 800 }}>{getMarketLevelLabel(info.marketPressureLevel)}</span>
+                </span>
 
                 {/* Detailed Hover Tooltip */}
                 <div className={tooltipClass}>
                   <div className={styles.tooltipHeader}>
-                    <span>{pos} Scarcity Details</span>
-                    <span className={styles.tooltipRemaining}>{info.remainingCount} left</span>
+                    <span>{pos} Pressure Details</span>
+                    <span className={styles.tooltipRemaining}>
+                      {info.remainingCount} {pos === "RP" ? "save sources" : "left"}
+                    </span>
                   </div>
                   
                   {info.bestPlayerNow ? (
@@ -791,22 +851,42 @@ export default function DashboardSummary({
                         </div>
                       )}
 
+                      {info.marketWatchlist && info.marketWatchlist.length > 0 && (
+                        <div className={styles.tooltipSection}>
+                          <span className={styles.tooltipSectionTitle}>ADP Market Watch</span>
+                          <div className={styles.tooltipExpectedList}>
+                            {info.marketWatchlist.map((p, idx) => (
+                              <div key={`${p.name}-${idx}`} className={styles.tooltipExpectedPlayer}>
+                                <div className={styles.tooltipExpectedLeft}>
+                                  <span className={styles.tooltipPlayerNameMini}>{p.name}</span>
+                                  <span className={styles.tooltipPlayerValueMini}>ADP {p.adp.toFixed(0)}</span>
+                                </div>
+                                <div className={styles.tooltipExpectedRight}>
+                                  <span
+                                    className={styles.tooltipProbBadge}
+                                    style={{
+                                      color: p.pReturn >= 0.7 ? "var(--success)" : p.pReturn >= 0.3 ? "var(--warning)" : "var(--danger)",
+                                      background: p.pReturn >= 0.7 ? "var(--success-glow)" : p.pReturn >= 0.3 ? "var(--warning-glow)" : "var(--danger-glow)"
+                                    }}
+                                  >
+                                    {Math.round(p.pReturn * 100)}% return
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <div className={styles.tooltipFooter}>
                         <div className={styles.tooltipFooterRow}>
                           <span>Value Drop:</span>
-                          <span>${Math.max(0, info.bestValueNow - info.expectedBestValueNext).toFixed(1)}</span>
+                          <span>${info.valueDropOff.toFixed(1)}</span>
                         </div>
                         <div className={styles.tooltipFooterRow}>
-                          <span>Scarcity Premium:</span>
-                          <span>+${Math.max(0, info.dropOff - Math.max(0, info.bestValueNow - info.expectedBestValueNext)).toFixed(1)}</span>
-                        </div>
-                        <div className={`${styles.tooltipFooterRow} ${styles.tooltipFooterTotal}`}>
-                          <span>Total VBD Drop-off:</span>
-                          <span style={{ 
-                            color: level === "high" ? "var(--danger)" : level === "med" ? "var(--warning)" : "var(--success)",
-                            fontWeight: 700 
-                          }}>
-                            ${info.dropOff.toFixed(1)}
+                          <span>Market Pressure:</span>
+                          <span style={{ color: marketColor, fontWeight: 700 }}>
+                            {getMarketLevelLabel(info.marketPressureLevel)} ({info.marketPlayersAtRisk.toFixed(1)} expected gone)
                           </span>
                         </div>
                       </div>
@@ -822,9 +902,13 @@ export default function DashboardSummary({
           })}
         </div>
       </div>
+        </>
+      )}
 
-      {/* Recommended Picks Card */}
-      <div className={styles.card}>
+      {showRecommendationCard && (
+        <>
+        {/* Recommended Picks Card */}
+        <div className={styles.card}>
         <div className={styles.cardHeader}>
           <h3 className={styles.cardTitle}>
             <svg
@@ -911,6 +995,39 @@ export default function DashboardSummary({
           <span>Timing uses ADP, return probability, reach cost, and overall value.</span>
         </div>
 
+        <div className={styles.categoryNeedsStrip}>
+          <div className={styles.categoryNeedsHeader}>
+            <span>Current Category Needs</span>
+            <span>
+              {userRosterSize === 0
+                ? "Draft a player to start tracking needs"
+                : categoryNeedSummary.length > 0
+                  ? "Based on roster pace vs targets"
+                  : "No clear category gaps yet"}
+            </span>
+          </div>
+          {categoryNeedSummary.length > 0 && (
+            <div className={styles.categoryNeedChips}>
+              {categoryNeedSummary.map((item) => {
+                const color = getCategoryNeedColor(item.need);
+                return (
+                  <button
+                    key={item.category}
+                    type="button"
+                    className={styles.categoryNeedChip}
+                    onClick={() => setRecommendationFocus(`category:${item.category}`)}
+                    style={{ borderColor: color, color }}
+                    title={`${item.category} need: ${getCategoryNeedLabel(item.need)}`}
+                  >
+                    <span>{item.category}</span>
+                    <small>{getCategoryNeedLabel(item.need)}</small>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         <div className={styles.recList}>
           {focusedRecommendations.map((rec, index) => renderRecommendation(rec, index))}
 
@@ -934,7 +1051,9 @@ export default function DashboardSummary({
             </div>
           </div>
         )}
-      </div>
+        </div>
+        </>
+      )}
     </div>
   );
 }

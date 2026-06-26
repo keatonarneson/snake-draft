@@ -9,7 +9,7 @@ interface RosterTrackerProps {
   teamIndex: number;
   teamNames: string[];
   userTeamIndex: number;
-  draftedPlayers: { player: Player; teamIndex: number }[];
+  draftedPlayers: { player: Player; teamIndex: number; round?: number; overallPick?: number }[];
   onSelectTeam: (index: number) => void;
   numRounds: number;
   projectionOverrides?: Record<string, Partial<PlayerStats>>;
@@ -113,10 +113,14 @@ export default function RosterTracker({
   const [hittingScaleBaseline, setHittingScaleBaseline] = useState<Partial<PlayerStats>>({});
   const [scaleTargetAB, setScaleTargetAB] = useState("");
 
+  const selectedDraftedPlayers = useMemo(() => {
+    return draftedPlayers.filter((dp) => dp.teamIndex === teamIndex);
+  }, [draftedPlayers, teamIndex]);
+
   // Get all players drafted by the currently selected team
   const sourceDrafted = useMemo(() => {
-    return draftedPlayers.filter((dp) => dp.teamIndex === teamIndex).map((dp) => dp.player);
-  }, [draftedPlayers, teamIndex]);
+    return selectedDraftedPlayers.map((dp) => dp.player);
+  }, [selectedDraftedPlayers]);
 
   const myDrafted = useMemo(() => {
     if (teamIndex !== userTeamIndex) return sourceDrafted;
@@ -134,6 +138,85 @@ export default function RosterTracker({
     () => new Map(sourceDrafted.map((player) => [player.id, player])),
     [sourceDrafted]
   );
+
+  const draftCapital = useMemo(() => {
+    const getPickCapital = (round?: number) => {
+      if (!round || round <= 0) return 1;
+      return Math.max(0.6, 10 * Math.pow(0.86, round - 1));
+    };
+
+    const getCapitalBucket = (player: Player) => {
+      if (!player.isPitcher) return "Hit";
+      if (player.positions.includes("SP")) return "SP";
+      return "RP";
+    };
+
+    const buckets = selectedDraftedPlayers.reduce(
+      (totals, draftedPlayer) => {
+        const capital = getPickCapital(draftedPlayer.round);
+        const player = draftedPlayer.player;
+
+        if (!player.isPitcher) {
+          totals.hitters += capital;
+        } else if (player.positions.includes("SP")) {
+          totals.sp += capital;
+        } else {
+          totals.rp += capital;
+        }
+
+        totals.total += capital;
+        return totals;
+      },
+      { hitters: 0, sp: 0, rp: 0, total: 0 }
+    );
+
+    const pct = (value: number) => buckets.total > 0 ? Math.round((value / buckets.total) * 100) : 0;
+    const pitcherPct = pct(buckets.sp + buckets.rp);
+    const hitterPct = pct(buckets.hitters);
+    const spPct = pct(buckets.sp);
+    const rpPct = pct(buckets.rp);
+    const picks = selectedDraftedPlayers
+      .map((draftedPlayer) => {
+        const capital = getPickCapital(draftedPlayer.round);
+        return {
+          player: draftedPlayer.player,
+          round: draftedPlayer.round,
+          overallPick: draftedPlayer.overallPick,
+          bucket: getCapitalBucket(draftedPlayer.player),
+          capital,
+          pct: pct(capital),
+        };
+      })
+      .sort((a, b) => (a.overallPick ?? 9999) - (b.overallPick ?? 9999));
+
+    let note = "Draft picks will shape this build as players are selected.";
+    if (buckets.total > 0) {
+      if (spPct >= 45 && selectedDraftedPlayers.length <= 6) {
+        note = "Early SP capital is heavy. Bats can take priority unless SP value falls.";
+      } else if (pitcherPct <= 20 && selectedDraftedPlayers.length >= 4) {
+        note = "Pitching capital is light. Watch upcoming SP/RP windows.";
+      } else if (hitterPct >= 78 && selectedDraftedPlayers.length >= 5) {
+        note = "Hitter capital is heavy. Start tracking pitching entry points.";
+      } else if (rpPct >= 18 && selectedDraftedPlayers.length <= 10) {
+        note = "Relief capital is already meaningful. Be selective with more saves.";
+      } else {
+        note = "Capital balance is reasonable for this stage.";
+      }
+    }
+
+    return {
+      hitters: buckets.hitters,
+      sp: buckets.sp,
+      rp: buckets.rp,
+      total: buckets.total,
+      hitterPct,
+      pitcherPct,
+      spPct,
+      rpPct,
+      picks,
+      note,
+    };
+  }, [selectedDraftedPlayers]);
 
   const editingProjectionPlayer = editingProjectionPlayerId
     ? sourcePlayerMap.get(editingProjectionPlayerId) || null
@@ -809,6 +892,67 @@ export default function RosterTracker({
                 </div>
               );
             })}
+          </div>
+
+          <div className={styles.draftCapitalPanel}>
+            <div className={styles.draftCapitalHeader}>
+              <span>Draft Capital</span>
+              <span>{draftCapital.total > 0 ? `${draftCapital.pitcherPct}% pitching` : "No picks yet"}</span>
+            </div>
+
+            <div className={styles.draftCapitalStack} aria-label="Draft capital split">
+              <div
+                className={`${styles.draftCapitalSegment} ${styles.draftCapitalHitters}`}
+                style={{ width: `${draftCapital.hitterPct}%` }}
+                title={`Hitters: ${draftCapital.hitterPct}%`}
+              />
+              <div
+                className={`${styles.draftCapitalSegment} ${styles.draftCapitalSp}`}
+                style={{ width: `${draftCapital.spPct}%` }}
+                title={`SP: ${draftCapital.spPct}%`}
+              />
+              <div
+                className={`${styles.draftCapitalSegment} ${styles.draftCapitalRp}`}
+                style={{ width: `${draftCapital.rpPct}%` }}
+                title={`RP: ${draftCapital.rpPct}%`}
+              />
+            </div>
+
+            <div className={styles.draftCapitalLegend}>
+              <span><b className={styles.draftCapitalDotHitters} />Hit {draftCapital.hitterPct}%</span>
+              <span><b className={styles.draftCapitalDotSp} />SP {draftCapital.spPct}%</span>
+              <span><b className={styles.draftCapitalDotRp} />RP {draftCapital.rpPct}%</span>
+            </div>
+
+            <p className={styles.draftCapitalNote}>{draftCapital.note}</p>
+
+            <details className={styles.draftCapitalDetails}>
+              <summary>
+                <span>Pick Breakdown</span>
+                <span>{draftCapital.picks.length} picks</span>
+              </summary>
+              {draftCapital.picks.length > 0 ? (
+                <div className={styles.draftCapitalPickList}>
+                  {draftCapital.picks.map((pick) => (
+                    <div key={pick.player.id} className={styles.draftCapitalPickRow}>
+                      <div className={styles.draftCapitalPickMain}>
+                        <span className={styles.draftCapitalPickName}>{pick.player.name}</span>
+                        <span className={styles.draftCapitalPickMeta}>
+                          {pick.bucket} · R{pick.round ?? "-"}
+                          {pick.overallPick ? ` · P${pick.overallPick}` : ""}
+                        </span>
+                      </div>
+                      <div className={styles.draftCapitalPickValue}>
+                        <span>{pick.pct}%</span>
+                        <small>{pick.capital.toFixed(1)} cap</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.draftCapitalEmpty}>Drafted players will appear here.</p>
+              )}
+            </details>
           </div>
         </div>
       </div>

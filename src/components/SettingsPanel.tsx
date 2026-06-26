@@ -447,10 +447,10 @@ export default function SettingsPanel({
                 />
               </div>
 
-              {/* Position Scarcity */}
+              {/* Position Pressure */}
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem" }}>
-                  <span style={{ color: "var(--text-secondary)" }}>Position Scarcity</span>
+                  <span style={{ color: "var(--text-secondary)" }}>Position Pressure</span>
                   <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--primary)" }}>{positionScarcity.toFixed(1)}x</span>
                 </div>
                 <input
