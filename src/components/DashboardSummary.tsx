@@ -2,8 +2,8 @@
 
 import React, { useMemo, useState } from "react";
 import styles from "../app/page.module.css";
-import { CategoryNeeds, Recommendation, ScarcityInfo, calculateTargetMetrics, DraftPick } from "../utils/draftEngine";
-import { Player } from "../utils/sampleData";
+import { CategoryNeeds, Recommendation, ScarcityInfo, calculateTargetMetrics, DraftPick } from "../engine";
+import { Player } from "../types/draft";
 
 type RecommendationFocus =
   | "all"

@@ -3,7 +3,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import styles from "../app/page.module.css";
-import { Player, PlayerStats } from "../utils/sampleData";
+import { calculateCategoryStats } from "../engine/categoryStats";
+import { calculateDraftCapital } from "../engine/draftCapital";
+import {
+  buildRosterSlots,
+  canPlayerUseRosterSlot,
+  ROSTER_SLOTS,
+  SLOT_DISPLAY_LABELS,
+  SlotAssignment,
+} from "../engine/rosterSlots";
+import { Player, PlayerStats } from "../types/draft";
 
 interface RosterTrackerProps {
   teamIndex: number;
@@ -29,35 +38,6 @@ interface RosterTrackerProps {
   };
 }
 
-// Roster Slot Definitions
-const ROSTER_SLOTS = [
-  { label: "C", type: "batter", positions: ["C"] },
-  { label: "C", type: "batter", positions: ["C"] },
-  { label: "1B", type: "batter", positions: ["1B"] },
-  { label: "2B", type: "batter", positions: ["2B"] },
-  { label: "3B", type: "batter", positions: ["3B"] },
-  { label: "SS", type: "batter", positions: ["SS"] },
-  { label: "CI", type: "batter", positions: ["1B", "3B"] },
-  { label: "MI", type: "batter", positions: ["2B", "SS"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "UT", type: "batter", positions: ["1B", "2B", "3B", "SS", "OF", "UT"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-];
-
-type RosterSlotDefinition = typeof ROSTER_SLOTS[number];
-type SlotAssignment = string | "bench";
 type EditableStatKey = keyof PlayerStats;
 
 const HITTER_PROJECTION_FIELDS: { key: EditableStatKey; label: string; step?: string }[] = [
@@ -77,22 +57,6 @@ const PITCHER_PROJECTION_FIELDS: { key: EditableStatKey; label: string; step?: s
   { key: "ERA", label: "ERA", step: "0.01" },
   { key: "WHIP", label: "WHIP", step: "0.01" },
 ];
-
-const canPlayerUseRosterSlot = (player: Player, slot: RosterSlotDefinition) => {
-  if (slot.type === "pitcher") return player.isPitcher;
-  if (player.isPitcher) return false;
-  if (player.positions.includes("C") && !slot.positions.includes("C")) return false;
-  return player.positions.some((position) => slot.positions.includes(position));
-};
-
-const SLOT_DISPLAY_LABELS = ROSTER_SLOTS.map((slot, index) => {
-  const matchingSlots = ROSTER_SLOTS
-    .slice(0, index + 1)
-    .filter((candidate) => candidate.label === slot.label).length;
-  const totalMatchingSlots = ROSTER_SLOTS.filter((candidate) => candidate.label === slot.label).length;
-
-  return totalMatchingSlots > 1 ? `${slot.label} ${matchingSlots}` : slot.label;
-});
 
 export default function RosterTracker({
   teamIndex,
@@ -140,82 +104,7 @@ export default function RosterTracker({
   );
 
   const draftCapital = useMemo(() => {
-    const getPickCapital = (round?: number) => {
-      if (!round || round <= 0) return 1;
-      return Math.max(0.6, 10 * Math.pow(0.86, round - 1));
-    };
-
-    const getCapitalBucket = (player: Player) => {
-      if (!player.isPitcher) return "Hit";
-      if (player.positions.includes("SP")) return "SP";
-      return "RP";
-    };
-
-    const buckets = selectedDraftedPlayers.reduce(
-      (totals, draftedPlayer) => {
-        const capital = getPickCapital(draftedPlayer.round);
-        const player = draftedPlayer.player;
-
-        if (!player.isPitcher) {
-          totals.hitters += capital;
-        } else if (player.positions.includes("SP")) {
-          totals.sp += capital;
-        } else {
-          totals.rp += capital;
-        }
-
-        totals.total += capital;
-        return totals;
-      },
-      { hitters: 0, sp: 0, rp: 0, total: 0 }
-    );
-
-    const pct = (value: number) => buckets.total > 0 ? Math.round((value / buckets.total) * 100) : 0;
-    const pitcherPct = pct(buckets.sp + buckets.rp);
-    const hitterPct = pct(buckets.hitters);
-    const spPct = pct(buckets.sp);
-    const rpPct = pct(buckets.rp);
-    const picks = selectedDraftedPlayers
-      .map((draftedPlayer) => {
-        const capital = getPickCapital(draftedPlayer.round);
-        return {
-          player: draftedPlayer.player,
-          round: draftedPlayer.round,
-          overallPick: draftedPlayer.overallPick,
-          bucket: getCapitalBucket(draftedPlayer.player),
-          capital,
-          pct: pct(capital),
-        };
-      })
-      .sort((a, b) => (a.overallPick ?? 9999) - (b.overallPick ?? 9999));
-
-    let note = "Draft picks will shape this build as players are selected.";
-    if (buckets.total > 0) {
-      if (spPct >= 45 && selectedDraftedPlayers.length <= 6) {
-        note = "Early SP capital is heavy. Bats can take priority unless SP value falls.";
-      } else if (pitcherPct <= 20 && selectedDraftedPlayers.length >= 4) {
-        note = "Pitching capital is light. Watch upcoming SP/RP windows.";
-      } else if (hitterPct >= 78 && selectedDraftedPlayers.length >= 5) {
-        note = "Hitter capital is heavy. Start tracking pitching entry points.";
-      } else if (rpPct >= 18 && selectedDraftedPlayers.length <= 10) {
-        note = "Relief capital is already meaningful. Be selective with more saves.";
-      } else {
-        note = "Capital balance is reasonable for this stage.";
-      }
-    }
-
-    return {
-      hitters: buckets.hitters,
-      sp: buckets.sp,
-      rp: buckets.rp,
-      total: buckets.total,
-      hitterPct,
-      pitcherPct,
-      spPct,
-      rpPct,
-      picks,
-      note,
-    };
+    return calculateDraftCapital(selectedDraftedPlayers);
   }, [selectedDraftedPlayers]);
 
   const editingProjectionPlayer = editingProjectionPlayerId
@@ -252,135 +141,7 @@ export default function RosterTracker({
 
   // Fit players into roster slots dynamically
   const roster = useMemo(() => {
-    // Initialize empty slots
-    const slots = ROSTER_SLOTS.map((s, idx) => ({
-      id: `slot-${idx}`,
-      label: s.label,
-      type: s.type,
-      positions: s.positions,
-      player: null as Player | null,
-    }));
-
-    const bench: Player[] = [];
-    const manuallyBenched = new Set(
-      myDrafted
-        .filter((player) => slotAssignments[player.id] === "bench")
-        .map((player) => player.id)
-    );
-    const manuallyPlaced = new Set<string>();
-
-    myDrafted.forEach((player) => {
-      const assignedSlotId = slotAssignments[player.id];
-      if (!assignedSlotId || assignedSlotId === "bench") return;
-
-      const slot = slots.find((candidate) => candidate.id === assignedSlotId);
-      const slotDefinition = slot ? ROSTER_SLOTS[Number(slot.id.replace("slot-", ""))] : undefined;
-      if (slot && slotDefinition && !slot.player && canPlayerUseRosterSlot(player, slotDefinition)) {
-        slot.player = player;
-        manuallyPlaced.add(player.id);
-      }
-    });
-
-    // Sort drafted players: active roster positions first, utility next
-    const unplaced = myDrafted.filter(
-      (player) => !manuallyPlaced.has(player.id) && !manuallyBenched.has(player.id)
-    );
-    const canPlayerUseSlot = (player: Player, slot: typeof slots[number]) => {
-      const slotIndex = Number(slot.id.replace("slot-", ""));
-      return canPlayerUseRosterSlot(player, ROSTER_SLOTS[slotIndex]);
-    };
-
-    // First pass: Fit players into their exact primary position slots (e.g. C to C, SS to SS)
-    for (let i = 0; i < unplaced.length; i++) {
-      const player = unplaced[i];
-      let placed = false;
-
-      // Skip generic UT slot, CI/MI slots, and P slots in first pass
-      for (const slot of slots) {
-        if (slot.player === null && slot.label !== "UT" && slot.label !== "CI" && slot.label !== "MI" && slot.label !== "P") {
-          // If player has this position
-          if (canPlayerUseSlot(player, slot)) {
-            slot.player = player;
-            placed = true;
-            break;
-          }
-        }
-      }
-
-      if (placed) {
-        unplaced.splice(i, 1);
-        i--; // Adjust index after splice
-      }
-    }
-
-    // Second pass: Fit batters in CI, MI
-    for (let i = 0; i < unplaced.length; i++) {
-      const player = unplaced[i];
-      let placed = false;
-
-      for (const slot of slots) {
-        if (slot.player === null && (slot.label === "CI" || slot.label === "MI")) {
-          if (canPlayerUseSlot(player, slot)) {
-            slot.player = player;
-            placed = true;
-            break;
-          }
-        }
-      }
-
-      if (placed) {
-        unplaced.splice(i, 1);
-        i--;
-      }
-    }
-
-    // Third pass: Fit batters in UT and pitchers in P
-    for (let i = 0; i < unplaced.length; i++) {
-      const player = unplaced[i];
-      let placed = false;
-
-      for (const slot of slots) {
-        if (slot.player === null) {
-          if (slot.label === "UT" && !player.isPitcher && canPlayerUseSlot(player, slot)) {
-            slot.player = player;
-            placed = true;
-            break;
-          }
-          if (slot.label === "P" && player.isPitcher) {
-            slot.player = player;
-            placed = true;
-            break;
-          }
-        }
-      }
-
-      if (placed) {
-        unplaced.splice(i, 1);
-        i--;
-      }
-    }
-
-    // Remaining players go to the bench
-    bench.push(
-      ...myDrafted.filter((player) => manuallyBenched.has(player.id)),
-      ...unplaced
-    );
-
-    // Fill the bench slots up to the round count
-    const numActiveSlots = slots.length;
-    const numBenchSlotsNeeded = Math.max(0, numRounds - numActiveSlots);
-    const benchSlots = [];
-
-    for (let i = 0; i < numBenchSlotsNeeded; i++) {
-      benchSlots.push({
-        id: `bench-${i}`,
-        label: "BN",
-        type: "bench",
-        player: bench[i] || null,
-      });
-    }
-
-    return { active: slots, bench: benchSlots };
+    return buildRosterSlots(myDrafted, numRounds, slotAssignments);
   }, [myDrafted, numRounds, slotAssignments]);
 
   const movePlayer = (player: Player, destination: SlotAssignment) => {
@@ -500,46 +261,8 @@ export default function RosterTracker({
     });
   };
 
-  // Calculate accumulated statistics
   const stats = useMemo(() => {
-    let R = 0, HR = 0, RBI = 0, SB = 0, totalAB = 0, sumAVG = 0;
-    let W = 0, SV = 0, SO = 0, totalIP = 0, sumERA = 0, sumWHIP = 0;
-    let battersCount = 0;
-    let pitchersCount = 0;
-
-    myDrafted.forEach((player) => {
-      if (!player.isPitcher) {
-        R += player.stats.R || 0;
-        HR += player.stats.HR || 0;
-        RBI += player.stats.RBI || 0;
-        SB += player.stats.SB || 0;
-        if (player.stats.AB && player.stats.AB > 0) {
-          totalAB += player.stats.AB;
-          sumAVG += (player.stats.AVG || 0) * player.stats.AB;
-        }
-        battersCount++;
-      } else {
-        W += player.stats.W || 0;
-        SV += player.stats.SV || 0;
-        SO += player.stats.SO || 0;
-        if (player.stats.IP && player.stats.IP > 0) {
-          totalIP += player.stats.IP;
-          sumERA += (player.stats.ERA || 0) * player.stats.IP;
-          sumWHIP += (player.stats.WHIP || 0) * player.stats.IP;
-        }
-        pitchersCount++;
-      }
-    });
-
-    const avgAVG = totalAB > 0 ? sumAVG / totalAB : 0;
-    const avgERA = totalIP > 0 ? sumERA / totalIP : 0;
-    const avgWHIP = totalIP > 0 ? sumWHIP / totalIP : 0;
-
-    return {
-      R, HR, RBI, SB, AVG: avgAVG,
-      W, SV, SO, ERA: avgERA, WHIP: avgWHIP,
-      battersCount, pitchersCount
-    };
+    return calculateCategoryStats(myDrafted);
   }, [myDrafted]);
 
   // Use custom targets passed as prop
@@ -938,8 +661,8 @@ export default function RosterTracker({
                       <div className={styles.draftCapitalPickMain}>
                         <span className={styles.draftCapitalPickName}>{pick.player.name}</span>
                         <span className={styles.draftCapitalPickMeta}>
-                          {pick.bucket} · R{pick.round ?? "-"}
-                          {pick.overallPick ? ` · P${pick.overallPick}` : ""}
+                          {pick.bucket} - R{pick.round ?? "-"}
+                          {pick.overallPick ? ` - P${pick.overallPick}` : ""}
                         </span>
                       </div>
                       <div className={styles.draftCapitalPickValue}>

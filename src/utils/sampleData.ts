@@ -1,34 +1,4 @@
-export interface PlayerStats {
-  // Batting
-  AB?: number;
-  R?: number;
-  HR?: number;
-  RBI?: number;
-  SB?: number;
-  AVG?: number;
-  // Pitching
-  IP?: number;
-  W?: number;
-  SV?: number;
-  SO?: number;
-  ERA?: number;
-  WHIP?: number;
-}
-
-export interface Player {
-  id: string;
-  name: string;
-  team: string;
-  positions: string[];
-  adp: number;
-  minPick: number;
-  maxPick: number;
-  value: number; // FanGraphs Auction Value ($)
-  consensusValue?: number; // Consensus Projection Value ($) for CPU drafting
-  maxSystemValue?: number; // Maximum value across all loaded systems for upside calculations
-  stats: PlayerStats;
-  isPitcher: boolean;
-}
+import { Player, PlayerStats } from "../types/draft";
 
 const basePlayers: Omit<Player, "id">[] = [
   // Round 1

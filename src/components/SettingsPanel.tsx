@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import styles from "../app/page.module.css";
+import { ProjectionSystem } from "../data/projections";
 
 interface SettingsPanelProps {
   numTeams: number;
@@ -10,8 +11,8 @@ interface SettingsPanelProps {
   simSpeed: "manual" | "paced" | "instant";
   cpuProfileMode: "fixed" | "random";
   isDraftStarted: boolean;
-  projectionSystem: "oopsy" | "thebat" | "steamer" | "mock";
-  onProjectionSystemChange: (system: "oopsy" | "thebat" | "steamer" | "mock") => void;
+  projectionSystem: ProjectionSystem;
+  onProjectionSystemChange: (system: ProjectionSystem) => void;
   onConfigChange: (config: {
     numTeams?: number;
     userPosition?: number;
@@ -202,7 +203,7 @@ export default function SettingsPanel({
             value={projectionSystem}
             disabled={isDraftStarted}
             onChange={(e) => {
-              onProjectionSystemChange(e.target.value as "oopsy" | "thebat" | "steamer" | "mock");
+              onProjectionSystemChange(e.target.value as ProjectionSystem);
             }}
             style={{ width: "100%" }}
           >

@@ -1,4 +1,4 @@
-import { Player } from "./sampleData";
+import { Player } from "../types/draft";
 
 /**
  * Robust float parser that handles empty/invalid values by returning a fallback.

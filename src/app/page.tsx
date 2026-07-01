@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import styles from "./page.module.css";
-import { getMockPlayers, Player, PlayerStats } from "../utils/sampleData";
+import { Player, PlayerStats } from "../types/draft";
 import {
-  generateDraftSequence,
   calculatePositionScarcity,
   getRecommendations,
   DraftPick,
@@ -12,7 +11,6 @@ import {
   CpuProfile,
   calculateCpuScore,
   calculateAdpValue,
-  calculateTargetMetrics,
   calculateCategoryNeeds,
   CategoryNeeds,
   getCpuArchetype,
@@ -21,13 +19,16 @@ import {
   getCpuCloserPlan,
   isDraftableCloser,
   isPremiumCloser,
-} from "../utils/draftEngine";
+} from "../engine";
 import SettingsPanel from "../components/SettingsPanel";
 import DraftBoard from "../components/DraftBoard";
 import PlayerList from "../components/PlayerList";
 import RosterTracker from "../components/RosterTracker";
 import DashboardSummary from "../components/DashboardSummary";
 import StandingsView from "../components/StandingsView";
+import { useDraftState } from "../hooks/useDraftState";
+import { useDraftTargets } from "../hooks/useDraftTargets";
+import { useProjectionLoader } from "../hooks/useProjectionLoader";
 
 interface SandboxPreset {
   trustProjections: number;
@@ -151,21 +152,8 @@ export default function Home() {
     WHIP: 1.20,
   });
   
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [loadedPlayers, setLoadedPlayers] = useState<Player[]>([]);
-  const [projectionSystem, setProjectionSystem] = useState<"oopsy" | "thebat" | "steamer" | "mock">("oopsy");
-  const [allCsvDatasets, setAllCsvDatasets] = useState<{
-    oopsy: Player[];
-    thebat: Player[];
-    steamer: Player[];
-  } | null>(null);
-  const [isUsingCsv, setIsUsingCsv] = useState(false);
-  const [picks, setPicks] = useState<DraftPick[]>([]);
-  const [currentPickIndex, setCurrentPickIndex] = useState(0);
-  const [isDraftStarted, setIsDraftStarted] = useState(false);
   const [cpuSavesStrategies, setCpuSavesStrategies] = useState<string[]>([]);
   const [cpuProfiles, setCpuProfiles] = useState<CpuProfile[]>([]);
-  const [roundTargets, setRoundTargets] = useState<Record<number, { position: string | null; playerIds: string[] }>>({});
   const [projectionOverrides, setProjectionOverrides] = useState<Record<string, Partial<PlayerStats>>>({});
   const [activeMobileSection, setActiveMobileSection] = useState<MobileSection>("draft");
   const [activeCenterView, setActiveCenterView] = useState<CenterView>("draft");
@@ -173,108 +161,55 @@ export default function Home() {
   // Track which team's roster is currently selected in the sidebar
   const [rosterViewTeamIndex, setRosterViewTeamIndex] = useState(4); // default to user index (userPosition - 1)
 
-  // Set of drafted player IDs for quick lookup
-  const draftedPlayerIds = useMemo(() => {
-    return new Set(picks.slice(0, currentPickIndex).map((p) => p.playerDraftedId).filter(Boolean) as string[]);
-  }, [picks, currentPickIndex]);
+  const {
+    picks,
+    currentPickIndex,
+    currentPick,
+    draftedPlayerIds,
+    isDraftStarted,
+    isDraftComplete,
+    setIsDraftStarted,
+    resetDraftSequence,
+    draftPlayer,
+    setPickPlayer,
+    undoLastPick,
+  } = useDraftState({
+    calculatePickScoreDetails,
+    onUndoLastPick: () => setSimSpeed("manual"),
+  });
 
-  const toggleTargetPlayer = useCallback((playerId: string) => {
-    setRoundTargets((prev) => {
-      const copy = { ...prev };
-      
-      // 1. Check if the player is already targeted in any round. If so, remove them.
-      let found = false;
-      Object.keys(copy).forEach((roundStr) => {
-        const round = parseInt(roundStr);
-        if (copy[round]?.playerIds.includes(playerId)) {
-          copy[round] = {
-            ...copy[round],
-            playerIds: copy[round].playerIds.filter((id) => id !== playerId)
-          };
-          found = true;
-        }
-      });
-      
-      if (found) {
-        return copy;
-      }
-      
-      // 2. If not found, compute their optimal round and add them
-      const player = players.find((p) => p.id === playerId);
-      if (!player) return prev;
-      
-      const pCurr = currentPickIndex + 1;
-      const userPicks = picks.filter((p) => p.teamIndex === userPosition - 1);
-      const metrics = calculateTargetMetrics(player, pCurr, userPicks, draftedPlayerIds);
-      const optRound = metrics.optimalRound;
-      
-      if (optRound !== -1) {
-        copy[optRound] = {
-          position: copy[optRound]?.position ?? null,
-          playerIds: [...(copy[optRound]?.playerIds ?? []), playerId]
-        };
-      }
-      
-      return copy;
-    });
-  }, [players, currentPickIndex, picks, userPosition, draftedPlayerIds]);
+  const {
+    players,
+    loadedPlayers,
+    projectionSystem,
+    setProjectionSystem,
+    isUsingCsv,
+  } = useProjectionLoader({
+    numTeams,
+    numRounds,
+    userPosition,
+    resetDraftSequence,
+    setRosterViewTeamIndex,
+  });
 
-  const setRoundPositionTarget = useCallback((round: number, position: string | null) => {
-    setRoundTargets((prev) => ({
-      ...prev,
-      [round]: {
-        position,
-        playerIds: prev[round]?.playerIds ?? []
-      }
-    }));
-  }, []);
+  const {
+    roundTargets,
+    setRoundTargets,
+    toggleTargetPlayer,
+    setRoundPositionTarget,
+    moveTargetPlayer,
+    addTargetPlayerToRound,
+  } = useDraftTargets({
+    players,
+    currentPickIndex,
+    picks,
+    userPosition,
+    draftedPlayerIds,
+  });
 
-  const moveTargetPlayer = useCallback((playerId: string, fromRound: number, toRound: number) => {
-    setRoundTargets((prev) => {
-      const copy = { ...prev };
-      
-      // Remove from fromRound
-      if (copy[fromRound]) {
-        copy[fromRound] = {
-          ...copy[fromRound],
-          playerIds: copy[fromRound].playerIds.filter((id) => id !== playerId)
-        };
-      }
-      
-      // Add to toRound
-      copy[toRound] = {
-        position: copy[toRound]?.position ?? null,
-        playerIds: [...(copy[toRound]?.playerIds ?? []), playerId]
-      };
-      
-      return copy;
-    });
-  }, []);
-
-  const addTargetPlayerToRound = useCallback((playerId: string, round: number) => {
-    setRoundTargets((prev) => {
-      const copy = { ...prev };
-      
-      // Remove player from any other round if they exist there
-      Object.keys(copy).forEach((roundStr) => {
-        const r = parseInt(roundStr);
-        if (copy[r]?.playerIds.includes(playerId)) {
-          copy[r] = {
-            ...copy[r],
-            playerIds: copy[r].playerIds.filter((id) => id !== playerId)
-          };
-        }
-      });
-      
-      // Add to this specific round
-      copy[round] = {
-        position: copy[round]?.position ?? null,
-        playerIds: [...(copy[round]?.playerIds ?? []).filter(id => id !== playerId), playerId]
-      };
-      
-      return copy;
-    });
-  }, []);
+  useEffect(() => {
+    setRoundTargets({});
+  }, [projectionSystem, numTeams, numRounds, userPosition, setRoundTargets]);
 
   // ----------------------------------------------------
   // Initialize or Reset Draft
@@ -293,11 +228,7 @@ export default function Home() {
   }, [cpuProfileMode]);
 
   const initDraft = useCallback((teamsCount: number, roundsCount: number, userPos: number) => {
-    const pool = loadedPlayers.length > 0 ? loadedPlayers : getMockPlayers();
-    setPlayers(pool);
-    setPicks(generateDraftSequence(teamsCount, roundsCount));
-    setCurrentPickIndex(0);
-    setIsDraftStarted(false);
+    resetDraftSequence(teamsCount, roundsCount);
     setRosterViewTeamIndex(userPos - 1);
     setRoundTargets({});
     setProjectionOverrides({});
@@ -305,103 +236,7 @@ export default function Home() {
     const profiles = assignCpuProfiles(teamsCount, userPos);
     setCpuProfiles(profiles);
     setCpuSavesStrategies(profiles.map((profile) => profile.savesStrategy));
-  }, [loadedPlayers, assignCpuProfiles]);
-
-  // Load all CSV datasets once on mount to enable consensus calculations and fast switching
-  useEffect(() => {
-    async function loadAllData() {
-      try {
-        const fetchAndParse = async (hittersUrl: string, pitchersUrl: string) => {
-          const resHitters = await fetch(hittersUrl);
-          const resPitchers = await fetch(pitchersUrl);
-          if (!resHitters.ok || !resPitchers.ok) throw new Error("File not found");
-          const hittersText = await resHitters.text();
-          const pitchersText = await resPitchers.text();
-          const { parsePlayersFromCSVs } = await import("../utils/csvParser");
-          return parsePlayersFromCSVs(hittersText, pitchersText);
-        };
-
-        const [oopsy, steamer, thebat] = await Promise.all([
-          fetchAndParse("/oopsy_hitters.csv", "/oopsy_pitchers.csv").catch(() => []),
-          fetchAndParse("/steamer_hitters.csv", "/steamer_pitchers.csv").catch(() => []),
-          fetchAndParse("/thebat_pitchers.csv", "/thebat_hitters.csv").catch(() => []), // swapped!
-        ]);
-
-        if (oopsy.length > 0 || steamer.length > 0 || thebat.length > 0) {
-          const cache = { oopsy, steamer, thebat };
-          setAllCsvDatasets(cache);
-          setIsUsingCsv(true);
-          console.log(`Loaded custom projection databases: Oopsy (${oopsy.length}), Steamer (${steamer.length}), THE BAT (${thebat.length})`);
-        } else {
-          setIsUsingCsv(false);
-        }
-      } catch (err) {
-        console.error("Failed to load custom projection datasets, using mock data:", err);
-        setIsUsingCsv(false);
-      }
-    }
-    loadAllData();
-  }, []);
-
-  // Synchronize player pool with selected projection system and compute consensus values
-  useEffect(() => {
-    if (projectionSystem === "mock" || !allCsvDatasets) {
-      const mock = getMockPlayers();
-      setLoadedPlayers(mock);
-      setIsUsingCsv(false);
-      setPlayers(mock);
-      setPicks(generateDraftSequence(numTeams, numRounds));
-      setCurrentPickIndex(0);
-      setIsDraftStarted(false);
-      setRosterViewTeamIndex(userPosition - 1);
-      setRoundTargets({});
-      return;
-    }
-
-    let primary: Player[] = [];
-    if (projectionSystem === "oopsy") {
-      primary = allCsvDatasets.oopsy;
-    } else if (projectionSystem === "thebat") {
-      primary = allCsvDatasets.thebat;
-    } else if (projectionSystem === "steamer") {
-      primary = allCsvDatasets.steamer;
-    }
-
-    if (primary.length === 0) {
-      const mock = getMockPlayers();
-      setLoadedPlayers(mock);
-      setIsUsingCsv(false);
-      setPlayers(mock);
-      setPicks(generateDraftSequence(numTeams, numRounds));
-      setCurrentPickIndex(0);
-      setIsDraftStarted(false);
-      setRosterViewTeamIndex(userPosition - 1);
-      setRoundTargets({});
-      return;
-    }
-
-    // Compute consensus values across all loaded CSV systems
-    const computeConsensus = async () => {
-      const { computeConsensusValues } = await import("../utils/csvParser");
-      const parsedWithConsensus = computeConsensusValues(
-        primary,
-        allCsvDatasets.oopsy.length > 0 ? allCsvDatasets.oopsy : primary,
-        allCsvDatasets.thebat.length > 0 ? allCsvDatasets.thebat : primary,
-        allCsvDatasets.steamer.length > 0 ? allCsvDatasets.steamer : primary
-      );
-
-      setLoadedPlayers(parsedWithConsensus);
-      setIsUsingCsv(true);
-      setPlayers(parsedWithConsensus);
-      setPicks(generateDraftSequence(numTeams, numRounds));
-      setCurrentPickIndex(0);
-      setIsDraftStarted(false);
-      setRosterViewTeamIndex(userPosition - 1);
-      setRoundTargets({});
-    };
-
-    computeConsensus();
-  }, [projectionSystem, allCsvDatasets, numTeams, numRounds, userPosition]);
+  }, [loadedPlayers, resetDraftSequence, setRoundTargets, assignCpuProfiles]);
 
   // Run when league dimensions reset (we rely on loadedPlayers state being ready)
   useEffect(() => {
@@ -426,9 +261,7 @@ export default function Home() {
   // ----------------------------------------------------
   // Derivations & Calculations
   // ----------------------------------------------------
-  const currentPick = picks[currentPickIndex];
-  const isDraftComplete = currentPickIndex >= picks.length;
-  const isUserTurn = !isDraftComplete && currentPick.teamIndex === userPosition - 1;
+  const isUserTurn = !isDraftComplete && currentPick?.teamIndex === userPosition - 1;
 
   // List of already drafted players with extra details
   const draftedPlayersDetails = useMemo(() => {
@@ -480,7 +313,7 @@ export default function Home() {
   // Calculate real-time position scarcity
   const positionScarcity = useMemo(() => {
     const positions = ["C", "1B", "2B", "3B", "SS", "OF", "SP", "RP"];
-    const pCurr = isDraftComplete ? picks.length : currentPick.overallPick;
+    const pCurr = isDraftComplete ? picks.length : currentPick?.overallPick ?? picks.length;
     const pNext = userNextPickOverall;
 
     return calculatePositionScarcity(players, availablePlayers, pCurr, pNext, positions, rankScarcityCoeff, numTeams);
@@ -520,9 +353,9 @@ export default function Home() {
 
   // Calculate smart pick recommendations for the user
   const recommendations = useMemo(() => {
-    const pCurr = isDraftComplete ? picks.length : currentPick.overallPick;
+    const pCurr = isDraftComplete ? picks.length : currentPick?.overallPick ?? picks.length;
     const pNext = userNextPickOverall;
-    const round = isDraftComplete ? numRounds : currentPick.round;
+    const round = isDraftComplete ? numRounds : currentPick?.round ?? numRounds;
 
     // Map simplified state levers to raw engine parameters
     const needsMultiplier = categoryBalance;
@@ -575,17 +408,23 @@ export default function Home() {
   // ----------------------------------------------------
   // Draft Actions
   // ----------------------------------------------------
-  const calculatePickScoreDetails = useCallback((playerId: string, pickIndex: number, cpuScore?: number, cpuScoreDetails?: CpuScoreDetails) => {
+  function calculatePickScoreDetails(
+    playerId: string,
+    pickIndex: number,
+    draftPicks: DraftPick[],
+    cpuScore?: number,
+    cpuScoreDetails?: CpuScoreDetails
+  ) {
     let finalCpuScore = cpuScore;
     let finalCpuScoreDetails = cpuScoreDetails;
-    const pick = picks[pickIndex];
+    const pick = draftPicks[pickIndex];
 
     if (finalCpuScore === undefined && pick) {
       const playerObj = players.find(p => p.id === playerId);
       if (playerObj) {
         const teamIndex = pick.teamIndex;
         const playerMap = new Map(players.map((p) => [p.id, p]));
-        const priorRoster = picks
+        const priorRoster = draftPicks
           .slice(0, pickIndex)
           .filter((draftPick) => draftPick.teamIndex === teamIndex && draftPick.playerDraftedId)
           .map((draftPick) => playerMap.get(draftPick.playerDraftedId as string))
@@ -601,7 +440,7 @@ export default function Home() {
           cpuArchetype,
           positionScarcity,
           pickIndex,
-          picks,
+          draftPicks,
           players,
           strategy,
           0.0, // no random noise for manual/edit pick logs
@@ -613,81 +452,13 @@ export default function Home() {
     }
 
     return { finalCpuScore, finalCpuScoreDetails };
-  }, [picks, players, userPosition, cpuSavesStrategies, cpuProfiles, numRounds, positionScarcity]);
-
-  const draftPlayer = useCallback((playerId: string, cpuScore?: number, cpuScoreDetails?: CpuScoreDetails) => {
-    if (currentPickIndex >= picks.length) return;
-
-    const { finalCpuScore, finalCpuScoreDetails } = calculatePickScoreDetails(playerId, currentPickIndex, cpuScore, cpuScoreDetails);
-
-    setPicks((prevPicks) => {
-      const copy = [...prevPicks];
-      copy[currentPickIndex] = {
-        ...copy[currentPickIndex],
-        playerDraftedId: playerId,
-        cpuScore: finalCpuScore,
-        cpuScoreDetails: finalCpuScoreDetails,
-      };
-      return copy;
-    });
-
-    setCurrentPickIndex((prev) => prev + 1);
-  }, [currentPickIndex, picks.length, calculatePickScoreDetails]);
-
-  const setPickPlayer = useCallback((pickIndex: number, playerId: string) => {
-    if (pickIndex < 0 || pickIndex >= picks.length) return;
-
-    const { finalCpuScore, finalCpuScoreDetails } = calculatePickScoreDetails(playerId, pickIndex);
-    const nextPicks = picks.map((pick, index) => {
-      if (index === pickIndex) {
-        return {
-          ...pick,
-          playerDraftedId: playerId,
-          cpuScore: finalCpuScore,
-          cpuScoreDetails: finalCpuScoreDetails,
-        };
-      }
-
-      if (pick.playerDraftedId === playerId) {
-        return {
-          ...pick,
-          playerDraftedId: null,
-          cpuScore: undefined,
-          cpuScoreDetails: undefined,
-        };
-      }
-
-      return pick;
-    });
-
-    const firstEmptyIndex = nextPicks.findIndex((pick) => !pick.playerDraftedId);
-    setPicks(nextPicks);
-    setCurrentPickIndex(firstEmptyIndex === -1 ? nextPicks.length : firstEmptyIndex);
-  }, [picks, calculatePickScoreDetails]);
-
-  const undoLastPick = useCallback(() => {
-    if (currentPickIndex <= 0) return;
-
-    const lastPickIndex = currentPickIndex - 1;
-    setPicks((prevPicks) => {
-      const copy = [...prevPicks];
-      copy[lastPickIndex] = {
-        ...copy[lastPickIndex],
-        playerDraftedId: null,
-        cpuScore: undefined,
-        cpuScoreDetails: undefined,
-      };
-      return copy;
-    });
-    setCurrentPickIndex(lastPickIndex);
-    setSimSpeed("manual");
-  }, [currentPickIndex]);
+  }
 
   // ----------------------------------------------------
   // CPU Drafting Logic
   // ----------------------------------------------------
   const executeCpuPick = useCallback(() => {
-    if (currentPickIndex >= picks.length) return;
+    if (currentPickIndex >= picks.length || !currentPick) return;
     
     const cpuTeamIndex = currentPick.teamIndex;
     if (cpuTeamIndex === userPosition - 1) return; // Wait for user
@@ -802,7 +573,7 @@ export default function Home() {
 
   // Effect to drive CPU picks
   useEffect(() => {
-    if (!isDraftStarted || isDraftComplete) return;
+    if (!isDraftStarted || isDraftComplete || !currentPick) return;
 
     const cpuTeamIndex = currentPick.teamIndex;
     const isCpuTurn = cpuTeamIndex !== userPosition - 1;
@@ -997,14 +768,14 @@ export default function Home() {
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span className={styles.tickerLabel}>Current Pick</span>
                 <span className={styles.tickerVal}>
-                  R{currentPick.round} - P{currentPick.pickInRound}
+                  {currentPick ? `R${currentPick.round} - P${currentPick.pickInRound}` : "Not Started"}
                 </span>
               </div>
               <div style={{ width: "1px", height: "30px", background: "var(--glass-border)" }} />
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span className={styles.tickerLabel}>On The Clock</span>
                 <span className={styles.tickerSub} style={{ color: isUserTurn ? "var(--primary)" : "var(--secondary)" }}>
-                  {isUserTurn ? "YOUR TURN!" : teamNames[currentPick.teamIndex]}
+                  {isUserTurn ? "YOUR TURN!" : currentPick ? teamNames[currentPick.teamIndex] : ""}
                 </span>
               </div>
             </>
@@ -1125,9 +896,9 @@ export default function Home() {
                 recommendations={recommendations}
                 onDraftPlayer={draftPlayer}
                 isOnClock={isDraftStarted && isUserTurn}
-                currentTeamName={isDraftComplete || !isDraftStarted ? "" : teamNames[currentPick.teamIndex]}
+                currentTeamName={isDraftComplete || !isDraftStarted || !currentPick ? "" : teamNames[currentPick.teamIndex]}
                 currentPickIndex={currentPickIndex}
-                currentTeamIndex={isDraftComplete || !isDraftStarted ? undefined : currentPick.teamIndex}
+                currentTeamIndex={isDraftComplete || !isDraftStarted || !currentPick ? undefined : currentPick.teamIndex}
                 numRounds={numRounds}
                 isDraftStarted={isDraftStarted}
                 isDraftComplete={isDraftComplete}
