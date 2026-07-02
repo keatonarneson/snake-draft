@@ -33,7 +33,7 @@ export async function loadProjectionDatasets(): Promise<ProjectionDatasets | nul
   const [oopsy, steamer, thebat] = await Promise.all([
     fetchAndParseProjectionCsvs("/oopsy_hitters.csv", "/oopsy_pitchers.csv").catch(() => []),
     fetchAndParseProjectionCsvs("/steamer_hitters.csv", "/steamer_pitchers.csv").catch(() => []),
-    fetchAndParseProjectionCsvs("/thebat_pitchers.csv", "/thebat_hitters.csv").catch(() => []),
+    fetchAndParseProjectionCsvs("/thebat_hitters.csv", "/thebat_pitchers.csv").catch(() => []),
   ]);
 
   if (oopsy.length === 0 && steamer.length === 0 && thebat.length === 0) {
