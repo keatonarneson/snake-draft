@@ -1,7 +1,8 @@
 import React from "react";
+import { CpuScoreDetails } from "../../engine";
 
 interface CpuScorePanelProps {
-  cpuDetails: any;
+  cpuDetails: CpuScoreDetails | null;
   cpuLabel: string;
   currentTeamName: string;
   isDraftActive: boolean;
@@ -26,7 +27,7 @@ function ScoreLine({
   );
 }
 
-function cpuFormula(cpuDetails: any) {
+function cpuFormula(cpuDetails: CpuScoreDetails) {
   return [
     `$${cpuDetails.baseValue.toFixed(1)} base`,
     cpuDetails.rosterNeedBonus > 0 ? `+$${cpuDetails.rosterNeedBonus.toFixed(1)} need` : "",

@@ -7,7 +7,6 @@ export interface ScarcityPlayerInfo {
   value: number;
   pReturn: number;
 }
-
 export interface MarketPressurePlayerInfo {
   name: string;
   adp: number;
@@ -44,39 +43,6 @@ export const POSITION_SLOTS: Record<string, number> = {
   RP: 2.5,
 };
 
-/*
- * Helper: Define roster slot configurations to compute total slot counts per position.
- * This mirrors the `activeSlots` definition used in `fitRoster`.
- */
-const ACTIVE_SLOTS = [
-  // Hitter slots (priority 1)
-  { label: "C1", isPitcher: false, positions: ["C"] },
-  { label: "C2", isPitcher: false, positions: ["C"] },
-  { label: "1B", isPitcher: false, positions: ["1B"] },
-  { label: "2B", isPitcher: false, positions: ["2B"] },
-  { label: "3B", isPitcher: false, positions: ["3B"] },
-  { label: "SS", isPitcher: false, positions: ["SS"] },
-  { label: "OF1", isPitcher: false, positions: ["OF"] },
-  { label: "OF2", isPitcher: false, positions: ["OF"] },
-  { label: "OF3", isPitcher: false, positions: ["OF"] },
-  { label: "OF4", isPitcher: false, positions: ["OF"] },
-  { label: "OF5", isPitcher: false, positions: ["OF"] },
-  // Semiâ€‘flex slots (priority 2)
-  { label: "CI", isPitcher: false, positions: ["1B", "3B"] },
-  { label: "MI", isPitcher: false, positions: ["2B", "SS"] },
-  // Fully flexible hitter slot (priority 3)
-  { label: "UT", isPitcher: false, positions: ["C", "1B", "2B", "3B", "SS", "OF", "UT"] },
-  // Pitcher slots (priority 1)
-  { label: "P1", isPitcher: true, positions: ["SP", "RP"] },
-  { label: "P2", isPitcher: true, positions: ["SP", "RP"] },
-  { label: "P3", isPitcher: true, positions: ["SP", "RP"] },
-  { label: "P4", isPitcher: true, positions: ["SP", "RP"] },
-  { label: "P5", isPitcher: true, positions: ["SP", "RP"] },
-  { label: "P6", isPitcher: true, positions: ["SP", "RP"] },
-  { label: "P7", isPitcher: true, positions: ["SP", "RP"] },
-  { label: "P8", isPitcher: true, positions: ["SP", "RP"] },
-  { label: "P9", isPitcher: true, positions: ["SP", "RP"] },
-];
 
 export function calculatePositionScarcity(
   allPlayers: Player[],

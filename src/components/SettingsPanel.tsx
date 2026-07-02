@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import styles from "../app/page.module.css";
+import styles from "../features/draft-room/DraftRoom.module.css";
 import { ProjectionSystem } from "../data/projections";
 
 interface SettingsPanelProps {

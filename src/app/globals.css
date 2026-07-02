@@ -1,5 +1,7 @@
 /* Reset & Base Variables */
 :root {
+  --font-outfit: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-inter: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'Geist Mono', SFMono-Regular, Consolas, monospace;
 

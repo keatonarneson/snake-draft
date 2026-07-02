@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import styles from "../app/page.module.css";
+import styles from "../features/draft-room/DraftRoom.module.css";
 import {
   CATEGORIES,
   CategoryKey,
@@ -9,7 +9,7 @@ import {
   HITTER_CATEGORIES,
   PITCHER_CATEGORIES,
 } from "../engine/categoryStats";
-import { calculateProjectedStandings, TeamStanding } from "../engine/standings";
+import { calculateProjectedStandings } from "../engine/standings";
 import { Player, PlayerStats } from "../types/draft";
 
 type SortKey = "rank" | "team" | "points" | "hitterPoints" | "pitcherPoints" | "players" | "hitters" | "pitchers" | "value" | CategoryKey;

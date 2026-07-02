@@ -1,6 +1,6 @@
 "use client";
 
-import styles from "../app/page.module.css";
+import styles from "../features/draft-room/DraftRoom.module.css";
 import { Player } from "../types/draft";
 import { Recommendation, DraftPick, ScarcityInfo, CpuProfile } from "../engine";
 import { PlayerListToolbar, PlayerPoolRow, PlayerTableHeader, usePlayerListTable } from "./player-list";

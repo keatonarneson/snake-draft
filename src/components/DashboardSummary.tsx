@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import styles from "../app/page.module.css";
-import { CategoryNeeds, Recommendation, ScarcityInfo, calculateTargetMetrics, DraftPick } from "../engine";
+import React, { useCallback, useMemo, useState } from "react";
+import styles from "../features/draft-room/DraftRoom.module.css";
+import { CategoryNeeds, Recommendation, ScarcityInfo, TargetMetrics, calculateTargetMetrics, DraftPick } from "../engine";
 import { Player } from "../types/draft";
 
 type RecommendationFocus =
@@ -93,7 +93,7 @@ export default function DashboardSummary({
     : 12;
   const bestOverallScore = sortedRecommendations[0]?.score ?? 0;
 
-  const getDecision = (recommendation: Recommendation): RecommendationDecision => {
+  const getDecision = useCallback((recommendation: Recommendation): RecommendationDecision => {
     const picksAheadOfMarket = recommendation.player.adp - currentOverallPick;
     const scoreGap = bestOverallScore - recommendation.score;
     const likelyToReturn = recommendation.pReturn >= 0.70;
@@ -106,7 +106,7 @@ export default function DashboardSummary({
     if (picksAheadOfMarket <= 6 && scoreGap <= 5) return "draft";
     if (recommendation.pReturn < 0.72 || scoreGap <= 10) return "consider";
     return "wait";
-  };
+  }, [bestOverallScore, currentOverallPick, picksUntilNextTurn]);
 
   const focusedRecommendations = useMemo(() => {
     if (recommendationFocus === "all") return displayRecs;
@@ -145,9 +145,7 @@ export default function DashboardSummary({
     recommendationFocus,
     sortedRecommendations,
     displayRecs,
-    currentOverallPick,
-    picksUntilNextTurn,
-    bestOverallScore,
+    getDecision,
   ]);
 
   const getDecisionReason = (recommendation: Recommendation, decision: RecommendationDecision) => {
@@ -236,7 +234,7 @@ export default function DashboardSummary({
 
           return { player, metrics, roundSurvivalProb };
         })
-        .filter((item): item is { player: Player; metrics: any; roundSurvivalProb: number } => item !== null);
+        .filter((item): item is { player: Player; metrics: TargetMetrics; roundSurvivalProb: number } => item !== null);
 
       const positionCandidates = target.position
         ? recommendations
@@ -487,7 +485,7 @@ export default function DashboardSummary({
                   {/* Player targets for this round */}
                   {hasPlayerTargets ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderTop: "1px dashed rgba(255,255,255,0.04)", paddingTop: "8px" }}>
-                      {pick.players.map(({ player, metrics, roundSurvivalProb }) => {
+                      {pick.players.map(({ player, metrics }) => {
                         const isPlayerDrafted = draftedPlayerIds.has(player.id);
 
                         // Build the timeline array
@@ -522,7 +520,7 @@ export default function DashboardSummary({
                           }
                           
                           sortedRounds.forEach((r) => {
-                            const probEntry = metrics.survivalProbabilities.find((sp: any) => sp.round === r);
+                            const probEntry = metrics.survivalProbabilities.find((sp) => sp.round === r);
                             let probability = 0;
                             if (probEntry) {
                               probability = probEntry.probability;

@@ -1,5 +1,7 @@
 
 
+import type { CpuScoreDetails } from "./cpuScoring";
+
 export interface DraftPick {
   overallPick: number;
   round: number;
@@ -7,7 +9,7 @@ export interface DraftPick {
   teamIndex: number;
   playerDraftedId: string | null;
   cpuScore?: number;
-  cpuScoreDetails?: any;
+  cpuScoreDetails?: CpuScoreDetails;
 }
 
 export function generateDraftSequence(

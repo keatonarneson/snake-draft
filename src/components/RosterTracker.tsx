@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import styles from "../app/page.module.css";
+import styles from "../features/draft-room/DraftRoom.module.css";
 import { calculateCategoryStats } from "../engine/categoryStats";
 import { calculateDraftCapital } from "../engine/draftCapital";
 import {
@@ -111,33 +111,14 @@ export default function RosterTracker({
     ? sourcePlayerMap.get(editingProjectionPlayerId) || null
     : null;
 
-  const slotAssignments = slotAssignmentsByTeam[teamIndex] || {};
+  const slotAssignments = useMemo(() => {
+    const teamAssignments = slotAssignmentsByTeam[teamIndex] || {};
+    const validPlayerIds = new Set(sourceDrafted.map((player) => player.id));
 
-  useEffect(() => {
-    const draftedIdsByTeam = draftedPlayers.reduce<Record<number, Set<string>>>((acc, draftedPlayer) => {
-      if (!acc[draftedPlayer.teamIndex]) acc[draftedPlayer.teamIndex] = new Set();
-      acc[draftedPlayer.teamIndex].add(draftedPlayer.player.id);
-      return acc;
-    }, {});
-
-    setSlotAssignmentsByTeam((current) => {
-      let changed = false;
-      const next: Record<number, Record<string, SlotAssignment>> = {};
-
-      Object.entries(current).forEach(([teamKey, assignments]) => {
-        const assignedTeamIndex = Number(teamKey);
-        const validPlayerIds = draftedIdsByTeam[assignedTeamIndex] || new Set<string>();
-        const validAssignments = Object.fromEntries(
-          Object.entries(assignments).filter(([playerId]) => validPlayerIds.has(playerId))
-        );
-
-        if (Object.keys(validAssignments).length !== Object.keys(assignments).length) changed = true;
-        if (Object.keys(validAssignments).length > 0) next[assignedTeamIndex] = validAssignments;
-      });
-
-      return changed ? next : current;
-    });
-  }, [draftedPlayers]);
+    return Object.fromEntries(
+      Object.entries(teamAssignments).filter(([playerId]) => validPlayerIds.has(playerId))
+    );
+  }, [slotAssignmentsByTeam, sourceDrafted, teamIndex]);
 
   // Fit players into roster slots dynamically
   const roster = useMemo(() => {

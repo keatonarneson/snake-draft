@@ -1,4 +1,4 @@
-import styles from "../../app/page.module.css";
+import styles from "../../features/draft-room/DraftRoom.module.css";
 
 interface PlayerListToolbarProps {
   positionFilterOptions: string[];

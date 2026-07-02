@@ -1,5 +1,26 @@
 import { Player, PlayerStats } from "../types/draft";
 
+function hashSeed(input: string | number): number {
+  const text = String(input);
+  let hash = 2166136261;
+
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function seededRandom(input: string | number): number {
+  const seed = hashSeed(input);
+  return ((seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+}
+
+function seededInt(input: string | number, maxExclusive: number): number {
+  return Math.floor(seededRandom(input) * maxExclusive);
+}
+
 const basePlayers: Omit<Player, "id">[] = [
   // Round 1
   { name: "Ronald Acuña Jr.", team: "ATL", positions: ["OF"], adp: 1.2, minPick: 1, maxPick: 3, value: 44.0, isPitcher: false, stats: { AB: 600, R: 120, HR: 35, RBI: 95, SB: 55, AVG: 0.295 } },
@@ -125,11 +146,12 @@ export function getMockPlayers(): Player[] {
   let currentValue = -2.8;
 
   for (let i = players.length + 1; i <= 350; i++) {
-    const isPitcher = Math.random() > 0.55;
-    const team = teams[Math.floor(Math.random() * teams.length)];
-    const pos = positions[Math.floor(Math.random() * (isPitcher ? 2 : 6)) + (isPitcher ? 6 : 0)];
+    const seed = `mock-player-${i}`;
+    const isPitcher = seededRandom(`${seed}-role`) > 0.55;
+    const team = teams[seededInt(`${seed}-team`, teams.length)];
+    const pos = positions[seededInt(`${seed}-pos`, isPitcher ? 2 : 6) + (isPitcher ? 6 : 0)];
 
-    currentValue -= Math.random() * 0.05 + 0.02;
+    currentValue -= seededRandom(`${seed}-value`) * 0.05 + 0.02;
 
     const name = isPitcher 
       ? `Pitcher ${i - players.length + 50} (${pos})`
@@ -137,15 +159,15 @@ export function getMockPlayers(): Player[] {
 
     const stats: PlayerStats = isPitcher
       ? pos === "RP"
-        ? { IP: 60, W: Math.floor(Math.random() * 4), SV: Math.floor(Math.random() * 15), SO: 60 + Math.floor(Math.random() * 20), ERA: Math.round((3.00 + Math.random() * 1.5) * 100) / 100, WHIP: Math.round((1.10 + Math.random() * 0.2) * 100) / 100 }
-        : { IP: 150 + Math.floor(Math.random() * 30), W: 6 + Math.floor(Math.random() * 7), SV: 0, SO: 120 + Math.floor(Math.random() * 60), ERA: Math.round((3.60 + Math.random() * 1.4) * 100) / 100, WHIP: Math.round((1.15 + Math.random() * 0.2) * 100) / 100 }
+        ? { IP: 60, W: seededInt(`${seed}-w`, 4), SV: seededInt(`${seed}-sv`, 15), SO: 60 + seededInt(`${seed}-so`, 20), ERA: Math.round((3.00 + seededRandom(`${seed}-era`) * 1.5) * 100) / 100, WHIP: Math.round((1.10 + seededRandom(`${seed}-whip`) * 0.2) * 100) / 100 }
+        : { IP: 150 + seededInt(`${seed}-ip`, 30), W: 6 + seededInt(`${seed}-w`, 7), SV: 0, SO: 120 + seededInt(`${seed}-so`, 60), ERA: Math.round((3.60 + seededRandom(`${seed}-era`) * 1.4) * 100) / 100, WHIP: Math.round((1.15 + seededRandom(`${seed}-whip`) * 0.2) * 100) / 100 }
       : {
-          AB: 400 + Math.floor(Math.random() * 150),
-          R: 45 + Math.floor(Math.random() * 45),
-          HR: 5 + Math.floor(Math.random() * 22),
-          RBI: 40 + Math.floor(Math.random() * 50),
-          SB: Math.floor(Math.random() * 25),
-          AVG: parseFloat((0.230 + Math.random() * 0.060).toFixed(3))
+          AB: 400 + seededInt(`${seed}-ab`, 150),
+          R: 45 + seededInt(`${seed}-r`, 45),
+          HR: 5 + seededInt(`${seed}-hr`, 22),
+          RBI: 40 + seededInt(`${seed}-rbi`, 50),
+          SB: seededInt(`${seed}-sb`, 25),
+          AVG: parseFloat((0.230 + seededRandom(`${seed}-avg`) * 0.060).toFixed(3))
         };
 
     players.push({
@@ -170,15 +192,16 @@ export function getMockPlayers(): Player[] {
   // Reassign dense ADP, minPick, and maxPick based on value rank
   for (let idx = 0; idx < players.length; idx++) {
     const rank = idx + 1;
-    // Introduce a small random jitter to make ADPs look natural
-    const jitter = (Math.random() - 0.5) * 1.5;
+    const adpSeed = `${players[idx].id}-${rank}`;
+    // Introduce a small deterministic jitter to make ADPs look natural.
+    const jitter = (seededRandom(`${adpSeed}-jitter`) - 0.5) * 1.5;
     const adp = parseFloat(Math.max(1.0, rank + jitter).toFixed(1));
 
     // Standard deviation grows with ADP to reflect uncertainty
     const stdDev = adp * 0.08 + 1.2;
 
-    const minPick = Math.max(1, Math.floor(adp - Math.max(1.0, (1.5 + Math.random() * 1.0) * stdDev)));
-    const maxPick = Math.floor(adp + Math.max(1.0, (1.5 + Math.random() * 1.0) * stdDev));
+    const minPick = Math.max(1, Math.floor(adp - Math.max(1.0, (1.5 + seededRandom(`${adpSeed}-min`) * 1.0) * stdDev)));
+    const maxPick = Math.floor(adp + Math.max(1.0, (1.5 + seededRandom(`${adpSeed}-max`) * 1.0) * stdDev));
 
     players[idx].adp = adp;
     players[idx].minPick = minPick;

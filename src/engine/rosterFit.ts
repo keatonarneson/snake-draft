@@ -5,8 +5,10 @@ import { Player } from "../types/draft";
  */
 export function fitRoster(
   teamPlayers: Player[],
-  numRounds: number
+  _numRounds: number
 ): { active: Player[]; bench: Player[] } {
+  void _numRounds;
+
   const activeSlots = [
     // Specific hitter slots (Priority 1)
     { label: "C1", isPitcher: false, positions: ["C"], priority: 1 },

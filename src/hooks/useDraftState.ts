@@ -16,6 +16,8 @@ type CalculatePickScoreDetails = (
 
 interface UseDraftStateOptions {
   calculatePickScoreDetails: CalculatePickScoreDetails;
+  initialNumRounds?: number;
+  initialNumTeams?: number;
   onUndoLastPick?: () => void;
 }
 
@@ -35,9 +37,11 @@ interface UseDraftStateResult {
 
 export function useDraftState({
   calculatePickScoreDetails,
+  initialNumRounds = 30,
+  initialNumTeams = 12,
   onUndoLastPick,
 }: UseDraftStateOptions): UseDraftStateResult {
-  const [picks, setPicks] = useState<DraftPick[]>([]);
+  const [picks, setPicks] = useState<DraftPick[]>(() => generateDraftSequence(initialNumTeams, initialNumRounds));
   const [currentPickIndex, setCurrentPickIndex] = useState(0);
   const [isDraftStarted, setIsDraftStarted] = useState(false);
 

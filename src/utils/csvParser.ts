@@ -1,5 +1,22 @@
 import { Player } from "../types/draft";
 
+function hashSeed(input: string | number): number {
+  const text = String(input);
+  let hash = 2166136261;
+
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function seededRandom(input: string | number): number {
+  const seed = hashSeed(input);
+  return ((seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+}
+
 /**
  * Robust float parser that handles empty/invalid values by returning a fallback.
  */
@@ -234,19 +251,20 @@ export function parsePlayersFromCSVs(hittersText: string, pitchersText: string):
   // Reassign ADP/minPick/maxPick
   for (let idx = 0; idx < parsedPlayers.length; idx++) {
     const rank = idx + 1;
+    const playerSeed = `${parsedPlayers[idx].id}-${parsedPlayers[idx].name}-${rank}`;
     let adp = rank;
 
     if (useCsvAdps && parsedPlayers[idx].adp > 0) {
       adp = parsedPlayers[idx].adp;
     } else {
-      // Reassign rank-based ADP with a tiny jitter
-      const jitter = (Math.random() - 0.5) * 1.5;
+      // Reassign rank-based ADP with a tiny deterministic jitter.
+      const jitter = (seededRandom(`${playerSeed}-jitter`) - 0.5) * 1.5;
       adp = parseFloat(Math.max(1.0, rank + jitter).toFixed(1));
     }
 
     const stdDev = adp * 0.08 + 1.2;
-    const minPick = Math.max(1, Math.floor(adp - Math.max(1.0, (1.5 + Math.random() * 1.0) * stdDev)));
-    const maxPick = Math.ceil(adp + Math.max(1.0, (1.5 + Math.random() * 1.0) * stdDev));
+    const minPick = Math.max(1, Math.floor(adp - Math.max(1.0, (1.5 + seededRandom(`${playerSeed}-min`) * 1.0) * stdDev)));
+    const maxPick = Math.ceil(adp + Math.max(1.0, (1.5 + seededRandom(`${playerSeed}-max`) * 1.0) * stdDev));
 
     parsedPlayers[idx].adp = adp;
     parsedPlayers[idx].minPick = minPick;
