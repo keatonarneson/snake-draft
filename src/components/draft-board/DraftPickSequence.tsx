@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import styles from "../../features/draft-room/DraftRoom.module.css";
+import styles from "./DraftPickSequence.module.css";
 import { DraftPick } from "../../engine";
 import { Player } from "../../types/draft";
 

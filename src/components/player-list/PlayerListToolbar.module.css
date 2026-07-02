@@ -1,0 +1,47 @@
+/* Table Filters & Header Actions */
+.tableHeaderActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.searchWrapper {
+  position: relative;
+  flex-grow: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  composes: premium-input from global;
+  width: 100%;
+  padding-left: 36px;
+}
+
+.filterGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  composes: btn from global;
+  composes: btn-secondary from global;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
+.filterBtnActive {
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-color: var(--primary) !important;
+}

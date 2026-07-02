@@ -1,4 +1,4 @@
-import styles from "../../features/draft-room/DraftRoom.module.css";
+import styles from "./PlayerListToolbar.module.css";
 
 interface PlayerListToolbarProps {
   positionFilterOptions: string[];
@@ -22,7 +22,7 @@ export function PlayerListToolbar({
   return (
     <>
       <div className={styles.tableHeaderActions}>
-        <h3 className={styles.cardTitle} style={{ margin: 0 }}>
+        <h3 className="cardTitle" style={{ margin: 0 }}>
           <svg
             width="18"
             height="18"

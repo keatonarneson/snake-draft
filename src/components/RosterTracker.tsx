@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import styles from "../features/draft-room/DraftRoom.module.css";
+import styles from "./RosterTracker.module.css";
 import { calculateCategoryStats } from "../engine/categoryStats";
 import { calculateDraftCapital } from "../engine/draftCapital";
 import {
@@ -264,9 +264,9 @@ export default function RosterTracker({
     `${(getPercentOfTarget(val, target, invert) / MAX_TARGET_PERCENT) * 100}%`;
 
   return (
-    <div className={styles.card} style={{ flexGrow: 1 }}>
-      <div className={styles.cardHeader}>
-        <h3 className={styles.cardTitle}>
+    <div className="card glow-panel" style={{ flexGrow: 1 }}>
+      <div className="cardHeader">
+        <h3 className="cardTitle">
           <svg
             width="18"
             height="18"

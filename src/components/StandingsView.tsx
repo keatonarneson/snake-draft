@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import styles from "../features/draft-room/DraftRoom.module.css";
+import styles from "./StandingsView.module.css";
 import {
   CATEGORIES,
   CategoryKey,
@@ -136,9 +136,9 @@ export default function StandingsView({
   };
 
   return (
-    <div className={styles.card}>
-      <div className={styles.cardHeader}>
-        <h3 className={styles.cardTitle}>
+    <div className="card glow-panel">
+      <div className="cardHeader">
+        <h3 className="cardTitle">
           <svg
             width="18"
             height="18"

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useState } from "react";
-import styles from "../features/draft-room/DraftRoom.module.css";
+import styles from "./DashboardSummary.module.css";
 import { CategoryNeeds, Recommendation, ScarcityInfo, TargetMetrics, calculateTargetMetrics, DraftPick } from "../engine";
 import { Player } from "../types/draft";
 
@@ -400,9 +400,9 @@ export default function DashboardSummary({
       {showPlanCards && (
         <>
       {/* Target Board Card */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h3 className={styles.cardTitle}>
+      <div className="card glow-panel">
+        <div className="cardHeader">
+          <h3 className="cardTitle">
             <svg
               width="18"
               height="18"
@@ -739,9 +739,9 @@ export default function DashboardSummary({
       </div>
 
       {/* Position Pressure Card */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h3 className={styles.cardTitle}>
+      <div className="card glow-panel">
+        <div className="cardHeader">
+          <h3 className="cardTitle">
             <svg
               width="18"
               height="18"
@@ -906,9 +906,9 @@ export default function DashboardSummary({
       {showRecommendationCard && (
         <>
         {/* Recommended Picks Card */}
-        <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h3 className={styles.cardTitle}>
+        <div className="card glow-panel">
+        <div className="cardHeader">
+          <h3 className="cardTitle">
             <svg
               width="18"
               height="18"

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import styles from "../features/draft-room/DraftRoom.module.css";
 import { CpuProfile, DraftPick } from "../engine";
 import { Player } from "../types/draft";
 import {
@@ -72,7 +71,7 @@ export default function DraftBoard({
   } = useEditPickState({ picks, players, onEditPick });
 
   return (
-    <div className={styles.card} style={{ flexGrow: 1 }}>
+    <div className="card glow-panel" style={{ flexGrow: 1 }}>
       <DraftTrackerHeader
         currentPickIndex={currentPickIndex}
         picksUntilUser={picksUntilUser}

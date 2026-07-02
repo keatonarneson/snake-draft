@@ -1,0 +1,39 @@
+/* Draft Board Pick Sequence (Compact Sidebar) */
+.draftSeqList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.draftSeqItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-muted);
+}
+
+.draftSeqItemActive {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+}
+
+.draftSeqItemDrafted {
+  opacity: 0.6;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.draftSeqTeamName {
+  font-weight: 600;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import styles from "../../features/draft-room/DraftRoom.module.css";
+import styles from "./DraftTrackerHeader.module.css";
 
 interface DraftTrackerHeaderProps {
   currentPickIndex: number;
@@ -21,8 +21,8 @@ export default function DraftTrackerHeader({
   onOpenDraftLog,
 }: DraftTrackerHeaderProps) {
   return (
-    <div className={`${styles.cardHeader} ${styles.draftTrackerHeader}`}>
-      <h3 className={styles.cardTitle} style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+    <div className={`cardHeader ${styles.draftTrackerHeader}`}>
+      <h3 className="cardTitle" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
         <svg
           width="18"
           height="18"

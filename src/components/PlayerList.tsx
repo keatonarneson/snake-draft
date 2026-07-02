@@ -1,6 +1,5 @@
 "use client";
 
-import styles from "../features/draft-room/DraftRoom.module.css";
 import { Player } from "../types/draft";
 import { Recommendation, DraftPick, ScarcityInfo, CpuProfile } from "../engine";
 import { PlayerListToolbar, PlayerPoolRow, PlayerTableHeader, usePlayerListTable } from "./player-list";
@@ -68,7 +67,7 @@ export default function PlayerList({
   });
 
   return (
-    <div className={styles.card} style={{ flexGrow: 1 }}>
+    <div className="card glow-panel" style={{ flexGrow: 1 }}>
       <PlayerListToolbar
         positionFilterOptions={positionFilterOptions}
         searchTerm={searchTerm}
