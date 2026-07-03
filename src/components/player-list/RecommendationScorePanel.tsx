@@ -4,6 +4,7 @@ import { Player } from "../../types/draft";
 
 interface RecommendationScorePanelProps {
   draftedCount: number;
+  isDrafted: boolean;
   player: Player;
   rec?: Recommendation;
 }
@@ -41,7 +42,7 @@ function DetailLine({
   );
 }
 
-export function RecommendationScorePanel({ draftedCount, player, rec }: RecommendationScorePanelProps) {
+export function RecommendationScorePanel({ draftedCount, isDrafted, player, rec }: RecommendationScorePanelProps) {
   if (!rec) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -49,7 +50,9 @@ export function RecommendationScorePanel({ draftedCount, player, rec }: Recommen
           Recommendation Score Breakdown
         </span>
         <div style={{ background: "rgba(0,0,0,0.15)", padding: "16px", borderRadius: "8px", fontSize: "0.8rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center" }}>
-          Player already drafted. No active recommendation statistics.
+          {isDrafted
+            ? "Player already drafted. No active recommendation statistics."
+            : "No active recommendation statistics for this player."}
         </div>
       </div>
     );

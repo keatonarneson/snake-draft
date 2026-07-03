@@ -7,6 +7,7 @@ interface DraftDetail {
 }
 
 interface DraftActionCellProps {
+  draftActionLabel?: string;
   draftDetail?: DraftDetail;
   isDrafted: boolean;
   isOnClock: boolean;
@@ -14,7 +15,14 @@ interface DraftActionCellProps {
   playerId: string;
 }
 
-export function DraftActionCell({ draftDetail, isDrafted, isOnClock, onDraftPlayer, playerId }: DraftActionCellProps) {
+export function DraftActionCell({
+  draftActionLabel,
+  draftDetail,
+  isDrafted,
+  isOnClock,
+  onDraftPlayer,
+  playerId,
+}: DraftActionCellProps) {
   return (
     <td>
       {isDrafted ? (
@@ -30,7 +38,7 @@ export function DraftActionCell({ draftDetail, isDrafted, isOnClock, onDraftPlay
             onDraftPlayer(playerId);
           }}
         >
-          {isOnClock ? "Draft" : "Force Pick"}
+          {draftActionLabel ?? (isOnClock ? "Draft" : "Force Pick")}
         </button>
       )}
     </td>

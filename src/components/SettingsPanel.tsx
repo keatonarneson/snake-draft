@@ -7,6 +7,7 @@ interface SettingsPanelProps {
   numTeams: number;
   userPosition: number;
   numRounds: number;
+  draftMode: "mock" | "live";
   simSpeed: "manual" | "paced" | "instant";
   cpuProfileMode: "fixed" | "random";
   isDraftStarted: boolean;
@@ -16,6 +17,7 @@ interface SettingsPanelProps {
     numTeams?: number;
     userPosition?: number;
     numRounds?: number;
+    draftMode?: "mock" | "live";
     simSpeed?: "manual" | "paced" | "instant";
     cpuProfileMode?: "fixed" | "random";
   }) => void;
@@ -76,6 +78,7 @@ export default function SettingsPanel({
   numTeams,
   userPosition,
   numRounds,
+  draftMode,
   simSpeed,
   cpuProfileMode,
   isDraftStarted,
@@ -192,6 +195,46 @@ export default function SettingsPanel({
           />
         </div>
 
+        {/* Draft Mode */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
+            Draft Mode
+          </label>
+          <div style={{ display: "flex", background: "rgba(0,0,0,0.15)", padding: "2px", borderRadius: "6px", border: "1px solid var(--glass-border)" }}>
+            {([
+              { id: "mock", label: "Mock" },
+              { id: "live", label: "Live" },
+            ] as const).map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                disabled={isDraftStarted}
+                onClick={() => onConfigChange({ draftMode: mode.id })}
+                style={{
+                  flex: 1,
+                  padding: "7px 8px",
+                  fontSize: "0.75rem",
+                  borderRadius: "4px",
+                  border: "none",
+                  background: draftMode === mode.id ? "var(--primary)" : "transparent",
+                  color: draftMode === mode.id ? "var(--text-primary)" : "var(--text-secondary)",
+                  cursor: isDraftStarted ? "not-allowed" : "pointer",
+                  fontWeight: draftMode === mode.id ? 700 : 500,
+                  opacity: isDraftStarted ? 0.55 : 1,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+          {draftMode === "live" && (
+            <span style={{ color: "var(--text-muted)", fontSize: "0.72rem", lineHeight: 1.35 }}>
+              Record each real draft pick as it happens. CPU auto-picks stay off.
+            </span>
+          )}
+        </div>
+
         {/* Projections System */}
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
@@ -214,6 +257,7 @@ export default function SettingsPanel({
         </div>
 
         {/* Simulation Speed */}
+        {draftMode === "mock" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
             CPU Pick Behavior
@@ -251,8 +295,10 @@ export default function SettingsPanel({
             </label>
           </div>
         </div>
+        )}
 
         {/* CPU Profile Assignment */}
+        {draftMode === "mock" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 600 }}>
             CPU Profile Assignment
@@ -286,6 +332,7 @@ export default function SettingsPanel({
             ))}
           </div>
         </div>
+        )}
 
         {/* Collapsible Sandbox Settings */}
         <div style={{ borderTop: "1px solid var(--glass-border)", paddingTop: "12px", marginTop: "4px" }}>
@@ -839,11 +886,11 @@ export default function SettingsPanel({
               >
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
-              Start Draft
+              {draftMode === "live" ? "Start Live Draft" : "Start Draft"}
             </button>
           ) : (
             <>
-              {simSpeed === "manual" && (
+              {draftMode === "mock" && simSpeed === "manual" && (
                 <button className="btn btn-primary" onClick={onAutoPick} style={{ width: "100%" }}>
                   <svg
                     width="16"

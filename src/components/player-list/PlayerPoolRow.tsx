@@ -24,11 +24,14 @@ interface PlayerPoolRowProps {
   currentPickIndex?: number;
   currentTeamIndex?: number;
   currentTeamName: string;
+  draftDetail?: DraftedPlayer;
   draftedPlayers: DraftedPlayer[];
+  draftActionLabel?: string;
   isDraftComplete?: boolean;
   isDraftStarted?: boolean;
   isExpanded: boolean;
   isOnClock: boolean;
+  isPlayerTargeted: boolean;
   numRounds?: number;
   onDraftPlayer: (playerId: string) => void;
   onToggleTargetPlayer?: (playerId: string) => void;
@@ -48,11 +51,14 @@ export function PlayerPoolRow({
   currentPickIndex,
   currentTeamIndex,
   currentTeamName,
+  draftDetail,
   draftedPlayers,
+  draftActionLabel,
   isDraftComplete,
   isDraftStarted,
   isExpanded,
   isOnClock,
+  isPlayerTargeted,
   numRounds,
   onDraftPlayer,
   onToggleTargetPlayer,
@@ -64,21 +70,21 @@ export function PlayerPoolRow({
   toggleExpand,
   userTeamIndex,
 }: PlayerPoolRowProps) {
-  const isDrafted = draftedPlayers.some((d) => d.player.id === player.id);
-  const draftDetail = draftedPlayers.find((d) => d.player.id === player.id);
+  const isDrafted = Boolean(draftDetail);
   const pReturn = rec ? rec.pReturn : 0;
   const recScore = rec ? rec.score : player.value;
   const returnLevel = getReturnLevel(pReturn);
-  const isPlayerTargeted = Object.values(roundTargets).some((t) => t.playerIds.includes(player.id));
-  const timeline = buildReturnTimeline({
-    currentPickIndex,
-    draftedPlayers,
-    isDrafted,
-    picks,
-    player,
-    roundTargets,
-    userTeamIndex,
-  });
+  const timeline = isExpanded
+    ? buildReturnTimeline({
+        currentPickIndex,
+        draftedPlayers,
+        isDrafted,
+        picks,
+        player,
+        roundTargets,
+        userTeamIndex,
+      })
+    : [];
   return (
     <React.Fragment>
       <tr
@@ -93,7 +99,14 @@ export function PlayerPoolRow({
         <ProjectionSummaryCell player={player} />
         <ReturnProbabilityCell isDrafted={isDrafted} pReturn={pReturn} returnLevel={returnLevel} timeline={timeline} />
         <ScoreCell isDrafted={isDrafted} score={recScore} />
-        <DraftActionCell draftDetail={draftDetail} isDrafted={isDrafted} isOnClock={isOnClock} onDraftPlayer={onDraftPlayer} playerId={player.id} />
+        <DraftActionCell
+          draftActionLabel={draftActionLabel}
+          draftDetail={draftDetail}
+          isDrafted={isDrafted}
+          isOnClock={isOnClock}
+          onDraftPlayer={onDraftPlayer}
+          playerId={player.id}
+        />
       </tr>
 
       {isExpanded && (

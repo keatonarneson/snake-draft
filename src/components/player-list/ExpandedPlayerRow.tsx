@@ -48,6 +48,7 @@ export function ExpandedPlayerRow({
   scarcityMap,
   userTeamIndex,
 }: ExpandedPlayerRowProps) {
+  const isDrafted = draftedPlayers.some((draftedPlayer) => draftedPlayer.player.id === player.id);
   const { cpuDetails, cpuLabel, isDraftActive } = buildCpuScoreDetails({
     availablePlayers,
     cpuProfiles,
@@ -69,7 +70,7 @@ export function ExpandedPlayerRow({
       <td colSpan={9} style={{ padding: "16px 20px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.2fr", gap: "24px", alignItems: "start" }}>
           <PlayerProjectionPanel player={player} />
-          <RecommendationScorePanel draftedCount={draftedPlayers.length} player={player} rec={rec} />
+          <RecommendationScorePanel draftedCount={draftedPlayers.length} isDrafted={isDrafted} player={player} rec={rec} />
           <CpuScorePanel
             cpuDetails={cpuDetails}
             cpuLabel={cpuLabel}

@@ -23,6 +23,7 @@ interface DashboardSummaryProps {
   recommendations: Recommendation[];
   scarcityMap: Record<string, ScarcityInfo>;
   onDraftPlayer: (playerId: string) => void;
+  draftActionLabel?: string;
   isOnClock: boolean;
   roundTargets?: Record<number, { position: string | null; playerIds: string[] }>;
   onSetRoundPositionTarget?: (round: number, position: string | null) => void;
@@ -42,6 +43,7 @@ export default function DashboardSummary({
   recommendations,
   scarcityMap,
   onDraftPlayer,
+  draftActionLabel,
   isOnClock,
   roundTargets = {},
   onSetRoundPositionTarget,
@@ -378,7 +380,7 @@ export default function DashboardSummary({
             style={{ padding: "4px 8px", fontSize: "0.75rem" }}
             onClick={() => onDraftPlayer(rec.player.id)}
           >
-            {decision === "wait" ? "Draft Anyway" : "Draft"}
+            {draftActionLabel ?? (decision === "wait" ? "Draft Anyway" : "Draft")}
           </button>
         </div>
       </div>
@@ -663,7 +665,7 @@ export default function DashboardSummary({
                                 style={{ width: "100%", padding: "3px", fontSize: "0.7rem", marginTop: "2px" }}
                                 onClick={() => onDraftPlayer(player.id)}
                               >
-                                Draft {player.name}
+                                {draftActionLabel ?? `Draft ${player.name}`}
                               </button>
                             )}
                           </div>

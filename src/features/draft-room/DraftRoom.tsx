@@ -42,6 +42,7 @@ interface SandboxPreset {
 }
 
 type CpuProfileMode = "fixed" | "random";
+type DraftMode = "mock" | "live";
 type MobileSection = "setup" | "draft" | "roster";
 type CenterView = "draft" | "plan" | "standings";
 
@@ -121,6 +122,7 @@ export default function DraftRoom() {
   const [numTeams, setNumTeams] = useState(12);
   const [userPosition, setUserPosition] = useState(5); // 1-indexed draft slot
   const [numRounds, setNumRounds] = useState(30);
+  const [draftMode, setDraftMode] = useState<DraftMode>("mock");
   const [simSpeed, setSimSpeed] = useState<"manual" | "paced" | "instant">("paced");
   const [cpuProfileMode, setCpuProfileMode] = useState<CpuProfileMode>("fixed");
   
@@ -178,6 +180,8 @@ export default function DraftRoom() {
     initialNumTeams: numTeams,
     onUndoLastPick: () => setSimSpeed("manual"),
   });
+
+  const isLiveDraftMode = draftMode === "live";
 
   const {
     players,
@@ -249,6 +253,8 @@ export default function DraftRoom() {
   // Derivations & Calculations
   // ----------------------------------------------------
   const isUserTurn = !isDraftComplete && currentPick?.teamIndex === userPosition - 1;
+  const canRecordPick = isDraftStarted && !isDraftComplete;
+  const playerActionLabel = isLiveDraftMode ? "Mark Drafted" : undefined;
 
   // List of already drafted players with extra details
   const draftedPlayersDetails = useMemo(() => {
@@ -440,6 +446,15 @@ export default function DraftRoom() {
     return { finalCpuScore, finalCpuScoreDetails };
   }
 
+  const recordDraftPlayer = useCallback((playerId: string) => {
+    if (isLiveDraftMode) {
+      draftPlayer(playerId, 0);
+      return;
+    }
+
+    draftPlayer(playerId);
+  }, [draftPlayer, isLiveDraftMode]);
+
   // ----------------------------------------------------
   // CPU Drafting Logic
   // ----------------------------------------------------
@@ -492,11 +507,33 @@ export default function DraftRoom() {
       candidates = availablePlayers; // fallback
     }
 
-    // 3. Score candidates by CPU score using the new weighted decision model
+    // 3. Score a realistic market shortlist by CPU score.
+    // Full-pool scoring is too expensive with large CSV projection sets, especially in paced mocks.
     const pCurr = currentPick.overallPick;
+    const currentRound = currentPick.round;
     const cpuRosterPlayers = rosterPlayers;
+    const maxMarketAhead = currentRound <= 5 ? 36 : currentRound <= 15 ? 90 : 180;
+    const shortlistSize = currentRound <= 5 ? 60 : currentRound <= 15 ? 120 : 220;
+    const marketCandidates = candidates
+      .filter((player) => (
+        player.adp <= pCurr + maxMarketAhead ||
+        player.maxPick <= pCurr + Math.floor(maxMarketAhead * 0.65) ||
+        player.value >= 3
+      ))
+      .sort((a, b) => {
+        const aUrgency = pCurr >= a.maxPick ? -120 : 0;
+        const bUrgency = pCurr >= b.maxPick ? -120 : 0;
+        const aDistance = Math.abs(a.adp - pCurr);
+        const bDistance = Math.abs(b.adp - pCurr);
+        const aScore = aUrgency + aDistance - a.value * 1.6;
+        const bScore = bUrgency + bDistance - b.value * 1.6;
+        return aScore - bScore;
+      })
+      .slice(0, shortlistSize);
 
-    const candidateScores = candidates.map((player) => {
+    const scoredCandidates = marketCandidates.length > 0 ? marketCandidates : candidates.slice(0, shortlistSize);
+
+    const candidateScores = scoredCandidates.map((player) => {
       const randSeed = Math.random();
       const details = calculateCpuScore(
         player,
@@ -518,7 +555,6 @@ export default function DraftRoom() {
     candidateScores.sort((a, b) => b.score - a.score);
 
     // Dynamic pool size based on the current draft round
-    const currentRound = currentPick.round;
     let poolSize = 15;
     if (currentRound <= 5) {
       poolSize = 3;
@@ -560,6 +596,7 @@ export default function DraftRoom() {
   // Effect to drive CPU picks
   useEffect(() => {
     if (!isDraftStarted || isDraftComplete || !currentPick) return;
+    if (isLiveDraftMode) return;
 
     const cpuTeamIndex = currentPick.teamIndex;
     const isCpuTurn = cpuTeamIndex !== userPosition - 1;
@@ -575,7 +612,7 @@ export default function DraftRoom() {
       }
       // If manual, we wait for the user to trigger the click
     }
-  }, [currentPickIndex, userPosition, simSpeed, isDraftComplete, currentPick, executeCpuPick, isDraftStarted]);
+  }, [currentPickIndex, userPosition, simSpeed, isDraftComplete, currentPick, executeCpuPick, isDraftStarted, isLiveDraftMode]);
 
   // ----------------------------------------------------
   // Configuration Changes
@@ -584,6 +621,7 @@ export default function DraftRoom() {
     numTeams?: number;
     userPosition?: number;
     numRounds?: number;
+    draftMode?: DraftMode;
     simSpeed?: "manual" | "paced" | "instant";
     cpuProfileMode?: CpuProfileMode;
   }) => {
@@ -594,6 +632,7 @@ export default function DraftRoom() {
       newConfig.numTeams !== undefined ||
       newConfig.userPosition !== undefined ||
       newConfig.numRounds !== undefined ||
+      newConfig.draftMode !== undefined ||
       newConfig.cpuProfileMode !== undefined;
 
     if (newConfig.numTeams !== undefined) setNumTeams(newConfig.numTeams);
@@ -602,6 +641,12 @@ export default function DraftRoom() {
       setRosterViewTeamIndex(newConfig.userPosition - 1);
     }
     if (newConfig.numRounds !== undefined) setNumRounds(newConfig.numRounds);
+    if (newConfig.draftMode !== undefined) {
+      setDraftMode(newConfig.draftMode);
+      if (newConfig.draftMode === "live") {
+        setSimSpeed("manual");
+      }
+    }
     if (newConfig.simSpeed !== undefined) setSimSpeed(newConfig.simSpeed);
     if (newConfig.cpuProfileMode !== undefined) setCpuProfileMode(newConfig.cpuProfileMode);
     if (shouldResetDraft) {
@@ -755,11 +800,13 @@ export default function DraftRoom() {
         </div>
 
         {/* Current status ticker */}
-        <div className={styles.statusTicker}>
+        <div className={styles.statusTicker} data-mode={draftMode}>
           {!isDraftStarted ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <span className={styles.tickerLabel}>Status</span>
-              <span className={styles.tickerVal} style={{ color: "var(--secondary)" }}>Draft Setup</span>
+              <span className={styles.tickerVal} style={{ color: "var(--secondary)" }}>
+                {isLiveDraftMode ? "Live Setup" : "Draft Setup"}
+              </span>
             </div>
           ) : isDraftComplete ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -776,7 +823,7 @@ export default function DraftRoom() {
               </div>
               <div style={{ width: "1px", height: "30px", background: "var(--glass-border)" }} />
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <span className={styles.tickerLabel}>On The Clock</span>
+                <span className={styles.tickerLabel}>{isLiveDraftMode ? "Record Pick For" : "On The Clock"}</span>
                 <span className={styles.tickerSub} style={{ color: isUserTurn ? "var(--primary)" : "var(--secondary)" }}>
                   {isUserTurn ? "YOUR TURN!" : currentPick ? teamNames[currentPick.teamIndex] : ""}
                 </span>
@@ -814,6 +861,7 @@ export default function DraftRoom() {
             numTeams={numTeams}
             userPosition={userPosition}
             numRounds={numRounds}
+            draftMode={draftMode}
             simSpeed={simSpeed}
             cpuProfileMode={cpuProfileMode}
             isDraftStarted={isDraftStarted}
@@ -848,6 +896,7 @@ export default function DraftRoom() {
             cpuProfiles={cpuProfiles}
             onUndoLastPick={undoLastPick}
             onEditPick={setPickPlayer}
+            isLiveDraftMode={isLiveDraftMode}
           />
         </section>
 
@@ -879,8 +928,9 @@ export default function DraftRoom() {
                 displayMode="draft"
                 recommendations={recommendations}
                 scarcityMap={positionScarcity}
-                onDraftPlayer={draftPlayer}
-                isOnClock={isDraftStarted && isUserTurn}
+                onDraftPlayer={recordDraftPlayer}
+                isOnClock={isLiveDraftMode ? canRecordPick : isDraftStarted && isUserTurn}
+                draftActionLabel={playerActionLabel}
                 roundTargets={roundTargets}
                 onSetRoundPositionTarget={setRoundPositionTarget}
                 onMoveTargetPlayer={moveTargetPlayer}
@@ -897,8 +947,9 @@ export default function DraftRoom() {
                 availablePlayers={availablePlayers}
                 draftedPlayers={draftedPlayersDetails}
                 recommendations={recommendations}
-                onDraftPlayer={draftPlayer}
-                isOnClock={isDraftStarted && isUserTurn}
+                onDraftPlayer={recordDraftPlayer}
+                isOnClock={isLiveDraftMode ? canRecordPick : isDraftStarted && isUserTurn}
+                draftActionLabel={playerActionLabel}
                 currentTeamName={isDraftComplete || !isDraftStarted || !currentPick ? "" : teamNames[currentPick.teamIndex]}
                 currentPickIndex={currentPickIndex}
                 currentTeamIndex={isDraftComplete || !isDraftStarted || !currentPick ? undefined : currentPick.teamIndex}
@@ -920,8 +971,9 @@ export default function DraftRoom() {
               displayMode="plan"
               recommendations={recommendations}
               scarcityMap={positionScarcity}
-              onDraftPlayer={draftPlayer}
-              isOnClock={isDraftStarted && isUserTurn}
+              onDraftPlayer={recordDraftPlayer}
+              isOnClock={isLiveDraftMode ? canRecordPick : isDraftStarted && isUserTurn}
+              draftActionLabel={playerActionLabel}
               roundTargets={roundTargets}
               onSetRoundPositionTarget={setRoundPositionTarget}
               onMoveTargetPlayer={moveTargetPlayer}

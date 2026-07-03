@@ -24,6 +24,7 @@ interface DraftBoardProps {
   players: Player[];
   cpuSavesStrategies?: string[];
   cpuProfiles?: CpuProfile[];
+  isLiveDraftMode?: boolean;
   onUndoLastPick?: () => void;
   onEditPick?: (pickIndex: number, playerId: string) => void;
 }
@@ -36,6 +37,7 @@ export default function DraftBoard({
   players,
   cpuSavesStrategies = [],
   cpuProfiles = [],
+  isLiveDraftMode = false,
   onUndoLastPick,
   onEditPick,
 }: DraftBoardProps) {
@@ -79,6 +81,7 @@ export default function DraftBoard({
         onOpenBoard={() => setIsModalOpen(true)}
         onOpenProfiles={() => setIsProfilesModalOpen(true)}
         onOpenDraftLog={() => setIsDebugModalOpen(true)}
+        isLiveDraftMode={isLiveDraftMode}
       />
 
       <DraftPickSequence
