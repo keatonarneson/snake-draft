@@ -60,7 +60,7 @@ export default function DraftTrackerHeader({
             gap: "4px",
             transition: "all 0.15s ease",
           }}
-          title="Undo the most recent completed pick and pause CPU auto-picking"
+          title={isLiveDraftMode ? "Undo the most recent recorded pick" : "Undo the most recent completed pick and pause CPU auto-picking"}
         >
           <svg
             width="10"

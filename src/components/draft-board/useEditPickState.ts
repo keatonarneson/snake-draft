@@ -43,9 +43,10 @@ export function useEditPickState({
     setEditPlayerId("");
   };
 
-  const saveEditedPick = () => {
-    if (editingPickIndex === null || !editPlayerId || !onEditPick) return;
-    onEditPick(editingPickIndex, editPlayerId);
+  const saveEditedPick = (playerIdOverride?: string) => {
+    const playerIdToSave = playerIdOverride ?? editPlayerId;
+    if (editingPickIndex === null || !playerIdToSave || !onEditPick) return;
+    onEditPick(editingPickIndex, playerIdToSave);
     closeEditPick();
   };
 

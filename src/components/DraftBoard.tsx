@@ -134,11 +134,12 @@ export default function DraftBoard({
       />
 
       <EditPickModal
+        key={editingPick ? editingPick.overallPick : "closed"}
         editingPick={editingPick}
         teamName={editingPick ? teamNames[editingPick.teamIndex] : ""}
         editPlayerId={editPlayerId}
         editPlayerOptions={editPlayerOptions}
-        canSave={Boolean(editPlayerId && onEditPick)}
+        canSave={Boolean(onEditPick)}
         onPlayerChange={setEditPlayerId}
         onSave={saveEditedPick}
         onClose={closeEditPick}

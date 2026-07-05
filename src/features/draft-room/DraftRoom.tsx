@@ -411,6 +411,12 @@ export default function DraftRoom() {
     let finalCpuScoreDetails = cpuScoreDetails;
     const pick = draftPicks[pickIndex];
 
+    // In live mode we only track real picks; CPU archetype scoring is
+    // meaningless (and expensive on large projection sets), so skip it.
+    if (isLiveDraftMode) {
+      return { finalCpuScore, finalCpuScoreDetails };
+    }
+
     if (finalCpuScore === undefined && pick) {
       const playerObj = players.find(p => p.id === playerId);
       if (playerObj) {
