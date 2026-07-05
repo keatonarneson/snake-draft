@@ -1,39 +1,183 @@
-/* Draft Board Pick Sequence (Compact Sidebar) */
-.draftSeqList {
+.trackerLayout {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 280px;
-  overflow-y: auto;
-  padding-right: 4px;
+  gap: 14px;
 }
 
-.draftSeqItem {
+.trackerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sectionHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px solid var(--border-muted);
+  gap: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-outfit), sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.draftSeqItemActive {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
-}
-
-.draftSeqItemDrafted {
-  opacity: 0.6;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.draftSeqTeamName {
-  font-weight: 600;
-  max-width: 120px;
-  white-space: nowrap;
+.sectionHeader small {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.pickStack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pickRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-muted);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.pickRow[data-current="true"] {
+  padding: 11px 12px;
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.13);
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.16);
+}
+
+.pickRow[data-user="true"] {
+  border-color: rgba(6, 182, 212, 0.42);
+  background: rgba(6, 182, 212, 0.08);
+}
+
+.pickRow[data-drafted="true"]:not([data-current="true"]) {
+  opacity: 0.72;
+}
+
+.pickMain {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.pickNumber {
+  flex: 0 0 34px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.pickInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pickMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.pickMeta span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerName {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerPositions {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.emptyPick {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pickActions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.editButton {
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.editButton:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  color: var(--text-primary);
+}
+
+.playerValue {
+  color: var(--success);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.playerValue[data-negative="true"] {
+  color: var(--danger);
+}
+
+.pickSlot {
+  min-width: 28px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.emptySection {
+  padding: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-align: center;
 }

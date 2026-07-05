@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
 import styles from "./DraftPickSequence.module.css";
 import { DraftPick } from "../../engine";
 import { Player } from "../../types/draft";
@@ -10,9 +9,90 @@ interface DraftPickSequenceProps {
   currentPickIndex: number;
   teamNames: string[];
   userTeamIndex: number;
+  isLiveDraftMode?: boolean;
   playerMap: Map<string, Player>;
   canEditPicks: boolean;
   onEditPick: (pickIndex: number) => void;
+}
+
+interface PickRowProps {
+  canEditPicks: boolean;
+  index: number;
+  isCurrent?: boolean;
+  isLiveDraftMode?: boolean;
+  isUser: boolean;
+  pick: DraftPick;
+  playerMap: Map<string, Player>;
+  teamName: string;
+  onEditPick: (pickIndex: number) => void;
+}
+
+function PickRow({
+  canEditPicks,
+  index,
+  isCurrent = false,
+  isLiveDraftMode = false,
+  isUser,
+  pick,
+  playerMap,
+  teamName,
+  onEditPick,
+}: PickRowProps) {
+  const draftedPlayer = pick.playerDraftedId ? playerMap.get(pick.playerDraftedId) : null;
+  const canEditCompletedPick = canEditPicks && Boolean(draftedPlayer);
+  const canSetLiveCurrentPick = canEditPicks && isCurrent && isLiveDraftMode && !draftedPlayer;
+  const actionLabel = canEditCompletedPick ? "Edit" : canSetLiveCurrentPick ? "Set Pick" : null;
+
+  return (
+    <div
+      className={styles.pickRow}
+      data-current={isCurrent}
+      data-user={isUser}
+      data-drafted={Boolean(draftedPlayer)}
+    >
+      <div className={styles.pickMain}>
+        <span className={styles.pickNumber}>#{pick.overallPick}</span>
+        <div className={styles.pickInfo}>
+          <div className={styles.pickMeta}>
+            <span>R{pick.round}.{pick.pickInRound}</span>
+            <span>{teamName}</span>
+          </div>
+          {draftedPlayer ? (
+            <span className={styles.playerName}>
+              {draftedPlayer.name}
+              <span className={styles.playerPositions}> {draftedPlayer.positions.join("/")}</span>
+            </span>
+          ) : (
+            <span className={styles.emptyPick}>{isCurrent ? "On the clock" : "Queued"}</span>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.pickActions}>
+        {actionLabel && (
+          <button
+            type="button"
+            className={styles.editButton}
+            onClick={() => onEditPick(index)}
+            title={draftedPlayer ? "Change this pick" : "Set this pick manually"}
+          >
+            {actionLabel}
+          </button>
+        )}
+        {draftedPlayer ? (
+          <span className={styles.playerValue} data-negative={draftedPlayer.value < 0}>
+            ${draftedPlayer.value.toFixed(1)}
+          </span>
+        ) : isUser ? (
+          <span className={styles.pickSlot}>You</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function EmptySection({ label }: { label: string }) {
+  return <div className={styles.emptySection}>{label}</div>;
 }
 
 export default function DraftPickSequence({
@@ -20,131 +100,107 @@ export default function DraftPickSequence({
   currentPickIndex,
   teamNames,
   userTeamIndex,
+  isLiveDraftMode = false,
   playerMap,
   canEditPicks,
   onEditPick,
 }: DraftPickSequenceProps) {
-  const activePickRef = useRef<HTMLDivElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (activePickRef.current && containerRef.current) {
-      const container = containerRef.current;
-      const activeElement = activePickRef.current;
-
-      const containerHeight = container.clientHeight;
-      const activeTop = activeElement.offsetTop;
-      const activeHeight = activeElement.clientHeight;
-
-      container.scrollTo({
-        top: activeTop - containerHeight / 2 + activeHeight / 2,
-        behavior: "smooth",
-      });
-    }
-  }, [currentPickIndex]);
+  const recentStart = Math.max(0, currentPickIndex - 5);
+  const recentPicks = picks.slice(recentStart, currentPickIndex);
+  const currentPick = picks[currentPickIndex];
+  const upcomingPicks = picks.slice(currentPickIndex + 1, currentPickIndex + 8);
+  const nextUserPick = picks
+    .slice(currentPickIndex + 1)
+    .find((pick) => pick.teamIndex === userTeamIndex);
+  const picksUntilUser = nextUserPick ? nextUserPick.overallPick - currentPickIndex - 1 : -1;
+  let nextUserPickLabel = "No more turns";
+  if (nextUserPick) {
+    nextUserPickLabel = picksUntilUser === 0
+      ? "You are up"
+      : `${picksUntilUser} until you (#${nextUserPick.overallPick})`;
+  }
 
   return (
-    <div ref={containerRef} className={styles.draftSeqList}>
-      {picks.map((pick, index) => {
-        const isCurrent = index === currentPickIndex;
-        const isDrafted = index < currentPickIndex;
-        const isUser = pick.teamIndex === userTeamIndex;
-        const draftedPlayer = pick.playerDraftedId ? playerMap.get(pick.playerDraftedId) : null;
+    <div className={styles.trackerLayout}>
+      <section className={styles.trackerSection}>
+        <div className={styles.sectionHeader}>
+          <span>Recent Picks</span>
+          <small>{recentPicks.length > 0 ? `Last ${recentPicks.length}` : "None yet"}</small>
+        </div>
+        <div className={styles.pickStack}>
+          {recentPicks.length > 0 ? (
+            recentPicks.map((pick) => {
+              const index = pick.overallPick - 1;
+              return (
+                <PickRow
+                  key={pick.overallPick}
+                  canEditPicks={canEditPicks}
+                  index={index}
+                  isLiveDraftMode={isLiveDraftMode}
+                  isUser={pick.teamIndex === userTeamIndex}
+                  pick={pick}
+                  playerMap={playerMap}
+                  teamName={teamNames[pick.teamIndex]}
+                  onEditPick={onEditPick}
+                />
+              );
+            })
+          ) : (
+            <EmptySection label="Drafted players will appear here." />
+          )}
+        </div>
+      </section>
 
-        let itemClass = styles.draftSeqItem;
-        if (isCurrent) itemClass += ` ${styles.draftSeqItemActive}`;
-        if (isDrafted) itemClass += ` ${styles.draftSeqItemDrafted}`;
+      <section className={styles.trackerSection}>
+        <div className={styles.sectionHeader}>
+          <span>On Clock</span>
+          <small>{currentPick ? `Pick #${currentPick.overallPick}` : "Complete"}</small>
+        </div>
+        {currentPick ? (
+          <PickRow
+            canEditPicks={canEditPicks}
+            index={currentPickIndex}
+            isCurrent
+            isLiveDraftMode={isLiveDraftMode}
+            isUser={currentPick.teamIndex === userTeamIndex}
+            pick={currentPick}
+            playerMap={playerMap}
+            teamName={teamNames[currentPick.teamIndex]}
+            onEditPick={onEditPick}
+          />
+        ) : (
+          <EmptySection label="Draft complete." />
+        )}
+      </section>
 
-        const styleOverride: React.CSSProperties = {};
-        if (isUser && !isDrafted && !isCurrent) {
-          styleOverride.borderColor = "rgba(99, 102, 241, 0.2)";
-          styleOverride.backgroundColor = "rgba(99, 102, 241, 0.02)";
-        }
-
-        return (
-          <div
-            key={pick.overallPick}
-            ref={isCurrent ? activePickRef : null}
-            className={itemClass}
-            style={styleOverride}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.7rem",
-                  color: isCurrent ? "var(--primary)" : "var(--text-muted)",
-                  fontWeight: 600,
-                  width: "48px",
-                }}
-              >
-                {pick.round}-{pick.pickInRound}
-              </span>
-
-              <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                <span className={styles.draftSeqTeamName}>
-                  {teamNames[pick.teamIndex]}
-                </span>
-                {draftedPlayer ? (
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-primary)",
-                      fontWeight: 600,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {draftedPlayer.name} ({draftedPlayer.positions.join("/")})
-                  </span>
-                ) : (
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                    {isCurrent ? "ON THE CLOCK" : "Queued"}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {canEditPicks && index <= currentPickIndex && (
-                <button
-                  onClick={() => onEditPick(index)}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.04)",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
-                    color: "var(--text-secondary)",
-                    padding: "2px 6px",
-                    borderRadius: "5px",
-                    fontSize: "0.65rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                  title={draftedPlayer ? "Change this pick" : "Set this pick manually"}
-                >
-                  Edit
-                </button>
-              )}
-              {draftedPlayer ? (
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "0.75rem",
-                    color: draftedPlayer.value >= 0 ? "var(--success)" : "var(--danger)",
-                    fontWeight: 600,
-                  }}
-                >
-                  ${draftedPlayer.value.toFixed(1)}
-                </span>
-              ) : (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                  #{pick.overallPick}
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })}
+      <section className={styles.trackerSection}>
+        <div className={styles.sectionHeader}>
+          <span>Upcoming</span>
+          <small>{nextUserPickLabel}</small>
+        </div>
+        <div className={styles.pickStack}>
+          {upcomingPicks.length > 0 ? (
+            upcomingPicks.map((pick) => {
+              const index = pick.overallPick - 1;
+              return (
+                <PickRow
+                  key={pick.overallPick}
+                  canEditPicks={canEditPicks}
+                  index={index}
+                  isLiveDraftMode={isLiveDraftMode}
+                  isUser={pick.teamIndex === userTeamIndex}
+                  pick={pick}
+                  playerMap={playerMap}
+                  teamName={teamNames[pick.teamIndex]}
+                  onEditPick={onEditPick}
+                />
+              );
+            })
+          ) : (
+            <EmptySection label="No upcoming picks." />
+          )}
+        </div>
+      </section>
     </div>
   );
 }

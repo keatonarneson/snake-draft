@@ -89,6 +89,7 @@ export default function DraftBoard({
         currentPickIndex={currentPickIndex}
         teamNames={teamNames}
         userTeamIndex={userTeamIndex}
+        isLiveDraftMode={isLiveDraftMode}
         playerMap={playerMap}
         canEditPicks={Boolean(onEditPick)}
         onEditPick={openEditPick}
