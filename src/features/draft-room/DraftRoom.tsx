@@ -15,11 +15,10 @@ import {
   getCpuArchetype,
   getCpuProfile,
   getCpuProfileTemplates,
-  getCpuCloserPlan,
-  isDraftableCloser,
-  isPremiumCloser,
+  selectCpuPick,
 } from "../../engine";
 import SettingsPanel from "../../components/SettingsPanel";
+import { SandboxSettingsProvider } from "../../components/settings-panel";
 import DraftBoard from "../../components/DraftBoard";
 import PlayerList from "../../components/PlayerList";
 import RosterTracker from "../../components/RosterTracker";
@@ -466,136 +465,33 @@ export default function DraftRoom() {
   // ----------------------------------------------------
   const executeCpuPick = useCallback(() => {
     if (currentPickIndex >= picks.length || !currentPick) return;
-    
+
     const cpuTeamIndex = currentPick.teamIndex;
     if (cpuTeamIndex === userPosition - 1) return; // Wait for user
 
     const cpuProfile = cpuProfiles[cpuTeamIndex] || getCpuProfile(cpuTeamIndex, userPosition - 1);
-    const cpuArchetype = cpuProfile.archetype;
     const strategy = cpuProfile.savesStrategy || cpuSavesStrategies[cpuTeamIndex] || "balanced";
+    const cpuRoster = draftedPlayersDetails
+      .filter((d) => d.teamIndex === cpuTeamIndex)
+      .map((d) => d.player);
 
-    // 1. Check constraints on CPU roster (ensure valid distribution of hitters/pitchers)
-    const cpuRoster = draftedPlayersDetails.filter((d) => d.teamIndex === cpuTeamIndex);
-    const numBatters = cpuRoster.filter((d) => !d.player.isPitcher).length;
-    const numPitchers = cpuRoster.filter((d) => d.player.isPitcher).length;
-
-    const activeBattersLimit = 14;
-    const activePitchersLimit = 9;
-    const benchLimit = numRounds - (activeBattersLimit + activePitchersLimit);
-
-    let allowedType: "all" | "batter" | "pitcher" = "all";
-    if (numBatters >= activeBattersLimit + benchLimit) {
-      allowedType = "pitcher";
-    } else if (numPitchers >= activePitchersLimit + benchLimit) {
-      allowedType = "batter";
-    }
-
-    // 2. Filter available players
-    let candidates = availablePlayers;
-    if (allowedType === "batter") {
-      candidates = candidates.filter((p) => !p.isPitcher);
-    } else if (allowedType === "pitcher") {
-      candidates = candidates.filter((p) => p.isPitcher);
-    }
-
-    const closerPlan = getCpuCloserPlan(cpuProfile, strategy);
-    const rosterPlayers = cpuRoster.map((rosterSpot) => rosterSpot.player);
-    const draftedClosers = rosterPlayers.filter(isDraftableCloser);
-    const draftedPremiumClosers = rosterPlayers.filter(isPremiumCloser);
-    const hasSolvedSavesEarly = draftedPremiumClosers.length >= 2;
-    const shouldBlockClosers = draftedClosers.length >= closerPlan.max || hasSolvedSavesEarly;
-
-    if (shouldBlockClosers) {
-      candidates = candidates.filter((p) => !isDraftableCloser(p));
-    }
-
-    if (candidates.length === 0) {
-      candidates = availablePlayers; // fallback
-    }
-
-    // 3. Score a realistic market shortlist by CPU score.
-    // Full-pool scoring is too expensive with large CSV projection sets, especially in paced mocks.
-    const pCurr = currentPick.overallPick;
-    const currentRound = currentPick.round;
-    const cpuRosterPlayers = rosterPlayers;
-    const maxMarketAhead = currentRound <= 5 ? 36 : currentRound <= 15 ? 90 : 180;
-    const shortlistSize = currentRound <= 5 ? 60 : currentRound <= 15 ? 120 : 220;
-    const marketCandidates = candidates
-      .filter((player) => (
-        player.adp <= pCurr + maxMarketAhead ||
-        player.maxPick <= pCurr + Math.floor(maxMarketAhead * 0.65) ||
-        player.value >= 3
-      ))
-      .sort((a, b) => {
-        const aUrgency = pCurr >= a.maxPick ? -120 : 0;
-        const bUrgency = pCurr >= b.maxPick ? -120 : 0;
-        const aDistance = Math.abs(a.adp - pCurr);
-        const bDistance = Math.abs(b.adp - pCurr);
-        const aScore = aUrgency + aDistance - a.value * 1.6;
-        const bScore = bUrgency + bDistance - b.value * 1.6;
-        return aScore - bScore;
-      })
-      .slice(0, shortlistSize);
-
-    const scoredCandidates = marketCandidates.length > 0 ? marketCandidates : candidates.slice(0, shortlistSize);
-
-    const candidateScores = scoredCandidates.map((player) => {
-      const randSeed = Math.random();
-      const details = calculateCpuScore(
-        player,
-        pCurr,
-        cpuRosterPlayers,
-        numRounds,
-        cpuArchetype,
-        positionScarcity,
-        currentPickIndex,
-        picks,
-        players,
-        strategy,
-        randSeed,
-        cpuProfile
-      );
-      return { player, score: details.score, details };
+    const selection = selectCpuPick({
+      cpuProfile,
+      cpuArchetype: cpuProfile.archetype,
+      strategy,
+      cpuRoster,
+      availablePlayers,
+      numRounds,
+      scarcityMap: positionScarcity,
+      currentPickIndex,
+      currentOverallPick: currentPick.overallPick,
+      currentRound: currentPick.round,
+      picks,
+      allPlayers: players,
     });
 
-    candidateScores.sort((a, b) => b.score - a.score);
-
-    // Dynamic pool size based on the current draft round
-    let poolSize = 15;
-    if (currentRound <= 5) {
-      poolSize = 3;
-    } else if (currentRound <= 15) {
-      poolSize = 8;
-    }
-
-    // Keep top candidates for weighted selection pool
-    const pool = candidateScores.slice(0, Math.min(poolSize, candidateScores.length));
-    
-    if (pool.length === 0) return;
-
-    // Convert scores to positive weights (shift relative to min score in the pool) and apply cubic exponential scaling
-    const minScore = pool[pool.length - 1].score;
-    const poolWithWeights = pool.map(c => ({
-      ...c,
-      weight: Math.pow(Math.max(0.1, c.score - minScore + 1.0), 3.0)
-    }));
-
-    const totalWeight = poolWithWeights.reduce((sum, c) => sum + c.weight, 0);
-
-    let randVal = Math.random() * totalWeight;
-    let chosenCandidate = pool[0];
-    for (const candidate of poolWithWeights) {
-      randVal -= candidate.weight;
-      if (randVal <= 0) {
-        chosenCandidate = candidate;
-        break;
-      }
-    }
-
-    const chosenPlayer = chosenCandidate.player;
-
-    if (chosenPlayer) {
-      draftPlayer(chosenPlayer.id, chosenCandidate.score, chosenCandidate.details);
+    if (selection) {
+      draftPlayer(selection.playerId, selection.score, selection.details);
     }
   }, [currentPickIndex, picks, currentPick, userPosition, draftedPlayersDetails, numRounds, availablePlayers, draftPlayer, positionScarcity, players, cpuSavesStrategies, cpuProfiles]);
 
@@ -750,6 +646,34 @@ export default function DraftRoom() {
     initDraft(numTeams, numRounds, userPosition);
   };
 
+  const sandboxValue = useMemo(() => ({
+    trustProjections,
+    draftUrgency,
+    categoryBalance,
+    rosterFit,
+    positionScarcity: positionScarcityWeight,
+    riskStyle,
+    reachTolerance,
+    savesStrategy,
+    rankScarcityCoeff,
+    activePreset,
+    onPresetSelect: handlePresetSelect,
+    onSandboxChange: handleSandboxChange,
+  }), [
+    trustProjections,
+    draftUrgency,
+    categoryBalance,
+    rosterFit,
+    positionScarcityWeight,
+    riskStyle,
+    reachTolerance,
+    savesStrategy,
+    rankScarcityCoeff,
+    activePreset,
+    handlePresetSelect,
+    handleSandboxChange,
+  ]);
+
   return (
     <div className={styles.container}>
       {/* Header Bar */}
@@ -863,35 +787,25 @@ export default function DraftRoom() {
       <main className={styles.dashboardGrid}>
         {/* Left Column: Settings and Draft Queue */}
         <section className={styles.settingsSidebar} data-mobile-active={activeMobileSection === "setup"}>
-          <SettingsPanel
-            numTeams={numTeams}
-            userPosition={userPosition}
-            numRounds={numRounds}
-            draftMode={draftMode}
-            simSpeed={simSpeed}
-            cpuProfileMode={cpuProfileMode}
-            isDraftStarted={isDraftStarted}
-            onConfigChange={handleConfigChange}
-            onReset={handleReset}
-            onAutoPick={executeCpuPick}
-            onStartDraft={() => setIsDraftStarted(true)}
-            trustProjections={trustProjections}
-            draftUrgency={draftUrgency}
-            categoryBalance={categoryBalance}
-            rosterFit={rosterFit}
-            positionScarcity={positionScarcityWeight}
-            riskStyle={riskStyle}
-            reachTolerance={reachTolerance}
-            savesStrategy={savesStrategy}
-            rankScarcityCoeff={rankScarcityCoeff}
-            activePreset={activePreset}
-            onPresetSelect={handlePresetSelect}
-            onSandboxChange={handleSandboxChange}
-            targets={targets}
-            onTargetsChange={setTargets}
-            projectionSystem={projectionSystem}
-            onProjectionSystemChange={handleProjectionSystemChange}
-          />
+          <SandboxSettingsProvider value={sandboxValue}>
+            <SettingsPanel
+              numTeams={numTeams}
+              userPosition={userPosition}
+              numRounds={numRounds}
+              draftMode={draftMode}
+              simSpeed={simSpeed}
+              cpuProfileMode={cpuProfileMode}
+              isDraftStarted={isDraftStarted}
+              onConfigChange={handleConfigChange}
+              onReset={handleReset}
+              onAutoPick={executeCpuPick}
+              onStartDraft={() => setIsDraftStarted(true)}
+              targets={targets}
+              onTargetsChange={setTargets}
+              projectionSystem={projectionSystem}
+              onProjectionSystemChange={handleProjectionSystemChange}
+            />
+          </SandboxSettingsProvider>
           <DraftBoard
             picks={picks}
             currentPickIndex={currentPickIndex}
@@ -966,6 +880,7 @@ export default function DraftRoom() {
                 onToggleTargetPlayer={toggleTargetPlayer}
                 picks={picks}
                 userTeamIndex={userPosition - 1}
+                scarcityMap={positionScarcity}
                 cpuSavesStrategies={cpuSavesStrategies}
                 cpuProfiles={cpuProfiles}
               />

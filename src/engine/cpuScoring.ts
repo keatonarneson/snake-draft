@@ -25,6 +25,38 @@ export interface CpuScoreDetails {
   isBench: boolean;
 }
 
+// --- Base value: ADP → projected auction-dollar curve ---
+// Dollar value decays from a max as ADP rises, following a gentle sub-linear
+// power curve, and is floored so late players never score at or below $0.
+const ADP_VALUE_MAX = 45.0; // value ($) at ADP 1
+const ADP_VALUE_DECAY = 1.8; // decay coefficient
+const ADP_VALUE_EXPONENT = 0.6; // sub-linear falloff
+const ADP_VALUE_FLOOR = 1.0; // never below $1
+
+// --- Reach penalty: taking a player earlier than their ADP ---
+// Each phase forgives a slack window of picks, then charges a per-pick cost for
+// every pick reached beyond it. Early reaches are cheap slack but steep cost;
+// late rounds tolerate large reaches at low cost.
+const REACH_EARLY_SLACK = 6;
+const REACH_EARLY_COST = 1.5; // rounds 1–5
+const REACH_MID_SLACK = 15;
+const REACH_MID_COST = 0.8; // rounds 6–15
+const REACH_LATE_SLACK = 30;
+const REACH_LATE_COST = 0.3; // rounds 16+
+
+// --- Roster penalty: discourage stacking a position past its need ---
+const CLOSER_PENALTY_OVER_MAX = 100.0; // already at closerPlan.max
+const CLOSER_PENALTY_SAVES_SOLVED = 45.0; // two premium closers already rostered
+const CLOSER_PENALTY_AT_TARGET_EARLY = 22.0; // at target, rounds ≤15
+const CLOSER_PENALTY_AT_TARGET_LATE = 14.0; // at target, rounds >15
+const CLOSER_PENALTY_TWO_PLUS_EARLY = 14.0; // 2+ closers, rounds ≤15
+const CLOSER_PENALTY_TWO_PLUS_LATE = 8.0; // 2+ closers, rounds >15
+const EXTRA_RP_AT_TARGET_PENALTY = 8.0; // non-closer RP once saves target met
+const SECOND_CATCHER_PENALTY_EARLY = 15.0; // 2nd catcher, rounds ≤20
+const SECOND_CATCHER_PENALTY_LATE = 5.0; // 2nd catcher, rounds >20
+const BATTER_HEAVY_PENALTY = 8.0; // too many batters vs pitchers
+const EXCESS_OF_PENALTY = 5.0; // 7th+ outfielder
+
 export function randomNormal(mean = 0, stdDev = 1): number {
   let u = 0, v = 0;
   while (u === 0) u = Math.random();
@@ -34,8 +66,8 @@ export function randomNormal(mean = 0, stdDev = 1): number {
 }
 
 export function calculateAdpValue(adp: number): number {
-  const baseValue = 45.0 - 1.8 * Math.pow(Math.max(0, adp - 1), 0.6);
-  return Math.round(Math.max(1.0, baseValue) * 10) / 10;
+  const baseValue = ADP_VALUE_MAX - ADP_VALUE_DECAY * Math.pow(Math.max(0, adp - 1), ADP_VALUE_EXPONENT);
+  return Math.round(Math.max(ADP_VALUE_FLOOR, baseValue) * 10) / 10;
 }
 
 export function calculateCpuScore(
@@ -284,16 +316,16 @@ export function calculateCpuScore(
   if (player.adp > pCurr) {
     const reachPicks = player.adp - pCurr;
     if (currentRound <= 5) {
-      if (reachPicks > 6) {
-        reachPenalty = (reachPicks - 6) * 1.5;
+      if (reachPicks > REACH_EARLY_SLACK) {
+        reachPenalty = (reachPicks - REACH_EARLY_SLACK) * REACH_EARLY_COST;
       }
     } else if (currentRound <= 15) {
-      if (reachPicks > 15) {
-        reachPenalty = (reachPicks - 15) * 0.8;
+      if (reachPicks > REACH_MID_SLACK) {
+        reachPenalty = (reachPicks - REACH_MID_SLACK) * REACH_MID_COST;
       }
     } else {
-      if (reachPicks > 30) {
-        reachPenalty = (reachPicks - 30) * 0.3;
+      if (reachPicks > REACH_LATE_SLACK) {
+        reachPenalty = (reachPicks - REACH_LATE_SLACK) * REACH_LATE_COST;
       }
     }
   }
@@ -310,30 +342,30 @@ export function calculateCpuScore(
   const countBatters = cpuRoster.filter(p => !p.isPitcher).length;
 
   if (isCatcher && countC >= 1) {
-    rosterPenalty += currentRound <= 20 ? 15.0 : 5.0;
+    rosterPenalty += currentRound <= 20 ? SECOND_CATCHER_PENALTY_EARLY : SECOND_CATCHER_PENALTY_LATE;
   }
 
   if (candidateIsCloser) {
     if (countClosers >= closerPlan.max) {
-      rosterPenalty += 100.0;
+      rosterPenalty += CLOSER_PENALTY_OVER_MAX;
     } else if (hasSolvedSavesEarly) {
-      rosterPenalty += 45.0;
+      rosterPenalty += CLOSER_PENALTY_SAVES_SOLVED;
     } else if (countClosers >= closerPlan.target) {
-      rosterPenalty += currentRound <= 15 ? 22.0 : 14.0;
+      rosterPenalty += currentRound <= 15 ? CLOSER_PENALTY_AT_TARGET_EARLY : CLOSER_PENALTY_AT_TARGET_LATE;
     } else if (countClosers >= 2) {
-      rosterPenalty += currentRound <= 15 ? 14.0 : 8.0;
+      rosterPenalty += currentRound <= 15 ? CLOSER_PENALTY_TWO_PLUS_EARLY : CLOSER_PENALTY_TWO_PLUS_LATE;
     }
   } else if (isRP && countClosers >= closerPlan.target) {
-    rosterPenalty += 8.0;
+    rosterPenalty += EXTRA_RP_AT_TARGET_PENALTY;
   }
 
   if (!isPitcher && countBatters >= 11 && countPitchers <= 4 && currentRound <= 18) {
-    rosterPenalty += 8.0;
+    rosterPenalty += BATTER_HEAVY_PENALTY;
   }
 
   const countOF = cpuRoster.filter(p => p.positions.includes("OF")).length;
   if (player.positions.includes("OF") && countOF >= 6) {
-    rosterPenalty += 5.0;
+    rosterPenalty += EXCESS_OF_PENALTY;
   }
 
   // 11. Urgency Bonus (ADP Slide & maxPick Urgency)

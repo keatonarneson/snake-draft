@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import styles from "./RosterTracker.module.css";
-import { calculateCategoryStats } from "../engine/categoryStats";
+import { calculateCategoryStats, scaleHitterCountingStats } from "../engine/categoryStats";
 import { calculateDraftCapital } from "../engine/draftCapital";
 import {
   buildRosterSlots,
@@ -228,18 +228,9 @@ export default function RosterTracker({
   };
 
   const applyHittingScale = () => {
-    const baselineAB = Number(hittingScaleBaseline.AB || 0);
-    const targetAB = Number(scaleTargetAB);
-    if (baselineAB <= 0 || targetAB <= 0) return;
-
-    const ratio = targetAB / baselineAB;
-    setProjectionDraft((current) => {
-      const scaled = { ...current, AB: targetAB };
-      (["R", "HR", "RBI", "SB"] as const).forEach((stat) => {
-        scaled[stat] = Math.round(Number(hittingScaleBaseline[stat] || 0) * ratio);
-      });
-      return scaled;
-    });
+    const scaled = scaleHitterCountingStats(hittingScaleBaseline, Number(scaleTargetAB));
+    if (!scaled) return;
+    setProjectionDraft((current) => ({ ...current, ...scaled }));
   };
 
   const stats = useMemo(() => {

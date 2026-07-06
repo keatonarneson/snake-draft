@@ -1,6 +1,47 @@
-import { Player } from "../types/draft";
+import { Player, PlayerStats } from "../types/draft";
 
 export type CategoryKey = "R" | "HR" | "RBI" | "SB" | "AVG" | "W" | "SV" | "SO" | "ERA" | "WHIP";
+
+/**
+ * Scale a hitter's counting stats (R/HR/RBI/SB) proportionally to a new AB
+ * total, e.g. when projecting a part-time player into a full-time role. Returns
+ * the changed stat fields (including the new AB), or null when the baseline or
+ * target AB is non-positive.
+ */
+export function scaleHitterCountingStats(
+  baseline: Partial<PlayerStats>,
+  targetAB: number
+): Partial<PlayerStats> | null {
+  const baselineAB = Number(baseline.AB || 0);
+  if (baselineAB <= 0 || targetAB <= 0) return null;
+
+  const ratio = targetAB / baselineAB;
+  const scaled: Partial<PlayerStats> = { AB: targetAB };
+  (["R", "HR", "RBI", "SB"] as const).forEach((stat) => {
+    scaled[stat] = Math.round(Number(baseline[stat] || 0) * ratio);
+  });
+  return scaled;
+}
+
+/**
+ * A player's approximate contribution to a rotisserie category. Rate stats
+ * (AVG/ERA/WHIP) are converted to volume-weighted contributions relative to a
+ * league-average baseline so they are comparable to counting stats.
+ */
+export function calculateCategoryContribution(player: Player, category: string): number {
+  const stats = player.stats;
+
+  switch (category) {
+    case "AVG":
+      return ((stats.AVG || 0) - 0.260) * (stats.AB || 500);
+    case "ERA":
+      return (4.00 - (stats.ERA || 4.00)) * (stats.IP || 100);
+    case "WHIP":
+      return (1.25 - (stats.WHIP || 1.25)) * (stats.IP || 100) * 4;
+    default:
+      return Number(stats[category as keyof typeof stats] || 0);
+  }
+}
 
 export interface CategoryDefinition {
   key: CategoryKey;

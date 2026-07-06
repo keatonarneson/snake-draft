@@ -252,3 +252,37 @@ export function getRecommendations(
   });
 }
 
+export type RecommendationDecision = "draft" | "consider" | "wait";
+
+export interface RecommendationTimingContext {
+  /** Overall pick number currently on the clock (1-indexed). */
+  currentOverallPick: number;
+  /** Highest score among all current recommendations. */
+  bestOverallScore: number;
+  /** Estimated picks until the user is next up. */
+  picksUntilNextTurn: number;
+}
+
+/**
+ * Classify a recommendation as draft-now, consider, or wait based on how far
+ * ahead of market it is, how it compares to the best available option, and how
+ * likely it is to survive until the user's next pick.
+ */
+export function getRecommendationTiming(
+  recommendation: Recommendation,
+  { currentOverallPick, bestOverallScore, picksUntilNextTurn }: RecommendationTimingContext
+): RecommendationDecision {
+  const picksAheadOfMarket = recommendation.player.adp - currentOverallPick;
+  const scoreGap = bestOverallScore - recommendation.score;
+  const likelyToReturn = recommendation.pReturn >= 0.70;
+  const clearReach =
+    picksAheadOfMarket > Math.max(10, picksUntilNextTurn * 0.7) ||
+    recommendation.reachPenalty <= -4;
+
+  if (likelyToReturn && clearReach) return "wait";
+  if (recommendation.pReturn < 0.40 && scoreGap <= 8) return "draft";
+  if (picksAheadOfMarket <= 6 && scoreGap <= 5) return "draft";
+  if (recommendation.pReturn < 0.72 || scoreGap <= 10) return "consider";
+  return "wait";
+}
+

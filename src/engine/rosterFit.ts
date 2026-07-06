@@ -111,14 +111,13 @@ export function checkPositionalFit(
   teamPlayers: Player[],
   newPlayer: Player,
   numRounds: number
-): { isBench: boolean; activePushedValue: number } {
+): { isBench: boolean } {
   const simulatedTeam = [...teamPlayers, newPlayer];
   const { bench } = fitRoster(simulatedTeam, numRounds);
-  
+
   const isNewPlayerOnBench = bench.some(p => p.id === newPlayer.id);
   return {
     isBench: isNewPlayerOnBench,
-    activePushedValue: 0
   };
 }
 
