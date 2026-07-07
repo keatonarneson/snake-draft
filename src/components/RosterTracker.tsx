@@ -140,6 +140,7 @@ export default function RosterTracker({
           className="premium-input"
           value={teamIndex}
           onChange={(e) => onSelectTeam(parseInt(e.target.value))}
+          aria-label="Select team roster to view"
           style={{ padding: "4px 8px", fontSize: "0.8rem", width: "160px" }}
         >
           {teamNames.map((name, idx) => (

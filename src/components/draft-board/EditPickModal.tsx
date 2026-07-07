@@ -71,11 +71,7 @@ export default function EditPickModal({
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      onClose();
-      return;
-    }
+    // Escape is handled by ModalShell.
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setHighlightIndex((current) => Math.min(current + 1, filteredPlayers.length - 1));

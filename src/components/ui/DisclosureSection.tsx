@@ -20,6 +20,7 @@ export function DisclosureSection({
       <button
         type="button"
         onClick={onToggle}
+        aria-expanded={isOpen}
         style={{
           width: "100%",
           background: "none",

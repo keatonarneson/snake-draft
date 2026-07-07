@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
 import { DraftPick } from "../../engine";
 import { Player } from "../../types/draft";
+import { ModalShell } from "../ui";
 import { getPositionColor, getPrimaryPosition } from "./positionDisplay";
 
 interface BoardGridModalProps {
@@ -79,93 +79,36 @@ export default function BoardGridModal({
   const numTeams = teamNames.length;
   const numRounds = picks[picks.length - 1]?.round || 30;
 
-  return createPortal((
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        backgroundColor: "rgba(10, 11, 18, 0.85)",
-        backdropFilter: "blur(12px)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-      }}
-      onClick={onClose}
+  const icon = (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--primary)"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <div
-        style={{
-          background: "#161821",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          borderRadius: "16px",
-          width: "95vw",
-          maxWidth: "1600px",
-          height: "90vh",
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px",
-          padding: "24px",
-          boxShadow: "0 24px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.15)",
-          overflow: "hidden",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--primary)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-            <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: 800, fontFamily: "var(--font-outfit)", color: "var(--text-primary)" }}>
-              League Draft Board
-            </h2>
-            <span className="badge badge-primary" style={{ fontSize: "0.72rem", padding: "4px 8px" }}>Grid View</span>
-          </div>
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
 
-          <button
-            onClick={onClose}
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "none",
-              color: "var(--text-muted)",
-              width: "32px",
-              height: "32px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              fontSize: "1rem",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
-              e.currentTarget.style.color = "var(--danger)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-              e.currentTarget.style.color = "var(--text-muted)";
-            }}
-          >
-            x
-          </button>
-        </div>
-
+  return (
+    <ModalShell
+      isOpen={isOpen}
+      title="League Draft Board"
+      ariaLabel="League draft board grid"
+      icon={icon}
+      badge={<span className="badge badge-primary" style={{ fontSize: "0.72rem", padding: "4px 8px" }}>Grid View</span>}
+      width="95vw"
+      maxWidth="1600px"
+      height="90vh"
+      onClose={onClose}
+    >
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px", padding: "6px 12px", background: "rgba(255,255,255,0.02)", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)", fontSize: "0.7rem" }}>
             <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Position Legend:</span>
@@ -423,7 +366,6 @@ export default function BoardGridModal({
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
-  ), document.body);
+    </ModalShell>
+  );
 }

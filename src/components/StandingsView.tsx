@@ -71,6 +71,8 @@ export default function StandingsView({
     if (sortKey !== key) return "";
     return sortDirection === "asc" ? " ▲" : " ▼";
   };
+  const ariaSort = (key: SortKey): "ascending" | "descending" | "none" =>
+    sortKey === key ? (sortDirection === "asc" ? "ascending" : "descending") : "none";
   const activeStarterCount = standings.reduce((sum, row) => sum + row.players, 0);
   const hasCustomUserProjections = Object.keys(projectionOverrides).length > 0;
 
@@ -195,10 +197,11 @@ export default function StandingsView({
                   { key: "pitchers" as SortKey, label: "Pit" },
                   { key: "value" as SortKey, label: "$" },
                 ].map((column) => (
-                  <th key={column.key} style={{ padding: "9px 10px", textAlign: column.key === "team" ? "left" : "right", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                  <th key={column.key} aria-sort={ariaSort(column.key)} style={{ padding: "9px 10px", textAlign: column.key === "team" ? "left" : "right", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
                     <button
                       type="button"
                       onClick={() => handleSort(column.key)}
+                      aria-label={`Sort by ${column.label}`}
                       style={{ background: "none", border: "none", color: "inherit", font: "inherit", fontWeight: 800, cursor: "pointer", padding: 0 }}
                     >
                       {column.label}{sortGlyph(column.key)}
@@ -206,12 +209,13 @@ export default function StandingsView({
                   </th>
                 ))}
                 {CATEGORIES.map((category) => (
-                  <th key={category.key} style={{ padding: "9px 10px", textAlign: "right", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                  <th key={category.key} aria-sort={ariaSort(category.key)} style={{ padding: "9px 10px", textAlign: "right", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
                     <button
                       type="button"
                       onClick={() => handleSort(category.key)}
                       style={{ background: "none", border: "none", color: "inherit", font: "inherit", fontWeight: 800, cursor: "pointer", padding: 0 }}
                       title={`${category.label} standings rank and projected total`}
+                      aria-label={`Sort by ${category.label}`}
                     >
                       {category.label}{sortGlyph(category.key)}
                     </button>
