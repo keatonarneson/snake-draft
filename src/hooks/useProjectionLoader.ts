@@ -11,25 +11,42 @@ interface UseProjectionLoaderResult {
   projectionSystem: ProjectionSystem;
   setProjectionSystem: (system: ProjectionSystem) => void;
   isUsingCsv: boolean;
+  isLoadingProjections: boolean;
+  projectionLoadFailed: boolean;
 }
 
 export function useProjectionLoader(): UseProjectionLoaderResult {
   const [projectionSystem, setProjectionSystem] = useState<ProjectionSystem>("oopsy");
   const [allCsvDatasets, setAllCsvDatasets] = useState<ProjectionDatasets | null>(null);
+  const [isLoadingProjections, setIsLoadingProjections] = useState(true);
+  const [projectionLoadFailed, setProjectionLoadFailed] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadAllData() {
       try {
         const datasets = await loadProjectionDatasets();
+        if (cancelled) return;
         if (datasets) {
           setAllCsvDatasets(datasets);
+        } else {
+          // No dataset resolved — every CSV was missing or failed to parse.
+          setProjectionLoadFailed(true);
         }
       } catch (err) {
+        if (cancelled) return;
         console.error("Failed to load custom projection datasets, using mock data:", err);
+        setProjectionLoadFailed(true);
+      } finally {
+        if (!cancelled) setIsLoadingProjections(false);
       }
     }
 
     loadAllData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const selection = useMemo(() => {
@@ -42,5 +59,7 @@ export function useProjectionLoader(): UseProjectionLoaderResult {
     projectionSystem,
     setProjectionSystem,
     isUsingCsv: selection.isUsingCsv,
+    isLoadingProjections,
+    projectionLoadFailed,
   };
 }

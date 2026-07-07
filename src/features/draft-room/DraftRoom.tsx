@@ -27,6 +27,8 @@ import StandingsView from "../../components/StandingsView";
 import { useDraftState } from "../../hooks/useDraftState";
 import { useDraftTargets } from "../../hooks/useDraftTargets";
 import { useProjectionLoader } from "../../hooks/useProjectionLoader";
+import { usePersistedSnapshot } from "../../hooks/usePersistedSnapshot";
+import type { ProjectionSystem } from "../../data/projections";
 
 interface SandboxPreset {
   trustProjections: number;
@@ -44,6 +46,53 @@ type CpuProfileMode = "fixed" | "random";
 type DraftMode = "mock" | "live";
 type MobileSection = "setup" | "draft" | "roster";
 type CenterView = "draft" | "plan" | "standings";
+
+const DEFAULT_TARGETS = {
+  R: 1125,
+  HR: 315,
+  RBI: 1103,
+  SB: 190,
+  AVG: 0.263,
+  W: 93,
+  SV: 88,
+  SO: 1275,
+  ERA: 3.65,
+  WHIP: 1.2,
+};
+type TargetBenchmarks = typeof DEFAULT_TARGETS;
+
+// Bump when the snapshot shape changes so stale saves are discarded on load.
+const SNAPSHOT_VERSION = 1;
+const DRAFT_STORAGE_KEY = "snake-draft:draft-snapshot";
+
+interface DraftSnapshot {
+  version: number;
+  picks: DraftPick[];
+  currentPickIndex: number;
+  isDraftStarted: boolean;
+  numTeams: number;
+  userPosition: number;
+  numRounds: number;
+  draftMode: DraftMode;
+  cpuProfileMode: CpuProfileMode;
+  projectionSystem: ProjectionSystem;
+  targets: TargetBenchmarks;
+  sandbox: {
+    trustProjections: number;
+    draftUrgency: number;
+    categoryBalance: number;
+    rosterFit: number;
+    positionScarcity: number;
+    riskStyle: "safe" | "balanced" | "aggressive";
+    reachTolerance: number;
+    savesStrategy: "wait" | "balanced" | "aggressive";
+    rankScarcityCoeff: number;
+    activePreset: string;
+  };
+  cpuProfiles: CpuProfile[];
+  cpuSavesStrategies: string[];
+  projectionOverrides: Record<string, Partial<PlayerStats>>;
+}
 
 const PRESETS: Record<string, SandboxPreset> = {
   balanced: {
@@ -139,18 +188,7 @@ export default function DraftRoom() {
   const [activePreset, setActivePreset] = useState<string>("balanced");
   
   // Custom Target Benchmarks
-  const [targets, setTargets] = useState({
-    R: 1125,
-    HR: 315,
-    RBI: 1103,
-    SB: 190,
-    AVG: 0.263,
-    W: 93,
-    SV: 88,
-    SO: 1275,
-    ERA: 3.65,
-    WHIP: 1.20,
-  });
+  const [targets, setTargets] = useState<TargetBenchmarks>(DEFAULT_TARGETS);
   
   const [cpuSavesStrategies, setCpuSavesStrategies] = useState<string[]>([]);
   const [cpuProfiles, setCpuProfiles] = useState<CpuProfile[]>([]);
@@ -173,6 +211,7 @@ export default function DraftRoom() {
     draftPlayer,
     setPickPlayer,
     undoLastPick,
+    loadDraft,
   } = useDraftState({
     calculatePickScoreDetails,
     initialNumRounds: numRounds,
@@ -187,6 +226,8 @@ export default function DraftRoom() {
     projectionSystem,
     setProjectionSystem,
     isUsingCsv,
+    isLoadingProjections,
+    projectionLoadFailed,
   } = useProjectionLoader();
 
   const {
@@ -674,6 +715,133 @@ export default function DraftRoom() {
     handleSandboxChange,
   ]);
 
+  // ----------------------------------------------------
+  // Persistence (localStorage) + data-load warning
+  // ----------------------------------------------------
+  const [restoreDismissed, setRestoreDismissed] = useState(false);
+  const [dataWarningDismissed, setDataWarningDismissed] = useState(false);
+
+  const draftSnapshot = useMemo<DraftSnapshot>(() => ({
+    version: SNAPSHOT_VERSION,
+    picks,
+    currentPickIndex,
+    isDraftStarted,
+    numTeams,
+    userPosition,
+    numRounds,
+    draftMode,
+    cpuProfileMode,
+    projectionSystem,
+    targets,
+    sandbox: {
+      trustProjections,
+      draftUrgency,
+      categoryBalance,
+      rosterFit,
+      positionScarcity: positionScarcityWeight,
+      riskStyle,
+      reachTolerance,
+      savesStrategy,
+      rankScarcityCoeff,
+      activePreset,
+    },
+    cpuProfiles,
+    cpuSavesStrategies,
+    projectionOverrides,
+  }), [
+    picks,
+    currentPickIndex,
+    isDraftStarted,
+    numTeams,
+    userPosition,
+    numRounds,
+    draftMode,
+    cpuProfileMode,
+    projectionSystem,
+    targets,
+    trustProjections,
+    draftUrgency,
+    categoryBalance,
+    rosterFit,
+    positionScarcityWeight,
+    riskStyle,
+    reachTolerance,
+    savesStrategy,
+    rankScarcityCoeff,
+    activePreset,
+    cpuProfiles,
+    cpuSavesStrategies,
+    projectionOverrides,
+  ]);
+
+  // Only start writing once the draft is underway, so a fresh page load never
+  // clobbers a saved draft before the user decides whether to resume it.
+  const persistEnabled = isDraftStarted || currentPickIndex > 0;
+  const { restorable: savedDraft, clearSaved } = usePersistedSnapshot<DraftSnapshot>(
+    DRAFT_STORAGE_KEY,
+    draftSnapshot,
+    persistEnabled
+  );
+
+  // Offer resume only before the current session touches the draft; once the
+  // user starts (persistEnabled) the saved snapshot is this session's own data.
+  const canRestore =
+    !!savedDraft &&
+    !persistEnabled &&
+    !restoreDismissed &&
+    savedDraft.version === SNAPSHOT_VERSION &&
+    (savedDraft.currentPickIndex > 0 || savedDraft.isDraftStarted);
+
+  const handleRestoreDraft = useCallback(() => {
+    if (!savedDraft) return;
+    setNumTeams(savedDraft.numTeams);
+    setUserPosition(savedDraft.userPosition);
+    setRosterViewTeamIndex(savedDraft.userPosition - 1);
+    setNumRounds(savedDraft.numRounds);
+    setDraftMode(savedDraft.draftMode);
+    setCpuProfileMode(savedDraft.cpuProfileMode);
+    setProjectionSystem(savedDraft.projectionSystem);
+    setTargets(savedDraft.targets);
+
+    const s = savedDraft.sandbox;
+    setTrustProjections(s.trustProjections);
+    setDraftUrgency(s.draftUrgency);
+    setCategoryBalance(s.categoryBalance);
+    setRosterFit(s.rosterFit);
+    setPositionScarcityWeight(s.positionScarcity);
+    setRiskStyle(s.riskStyle);
+    setReachTolerance(s.reachTolerance);
+    setSavesStrategy(s.savesStrategy);
+    setRankScarcityCoeff(s.rankScarcityCoeff);
+    setActivePreset(s.activePreset);
+
+    setCpuProfiles(savedDraft.cpuProfiles);
+    setCpuSavesStrategies(savedDraft.cpuSavesStrategies);
+    setProjectionOverrides(savedDraft.projectionOverrides);
+
+    // Resume paused so a restored CPU turn doesn't immediately auto-draft.
+    setSimSpeed("manual");
+    loadDraft(savedDraft.picks, savedDraft.currentPickIndex, savedDraft.isDraftStarted);
+    setRestoreDismissed(true);
+  }, [savedDraft, loadDraft, setProjectionSystem]);
+
+  const handleDiscardSavedDraft = useCallback(() => {
+    clearSaved();
+    setRestoreDismissed(true);
+  }, [clearSaved]);
+
+  const showDataWarning =
+    !isLoadingProjections &&
+    !dataWarningDismissed &&
+    projectionSystem !== "mock" &&
+    (!isUsingCsv || projectionLoadFailed);
+
+  const savedDraftLabel = savedDraft
+    ? `Round ${savedDraft.picks[savedDraft.currentPickIndex]?.round ?? savedDraft.numRounds}, pick ${
+        savedDraft.currentPickIndex + 1
+      } of ${savedDraft.picks.length}`
+    : "";
+
   const projectionLabel = isUsingCsv
     ? `${projectionSystem === "thebat" ? "THE BAT" : projectionSystem.toUpperCase()} loaded`
     : "Mock data";
@@ -770,6 +938,40 @@ export default function DraftRoom() {
           </button>
         ))}
       </nav>
+
+      {canRestore && (
+        <div className={`${styles.banner} ${styles.bannerInfo}`} role="status">
+          <div className={styles.bannerText}>
+            <strong>Resume your draft?</strong>
+            <span>{savedDraftLabel}</span>
+          </div>
+          <div className={styles.bannerActions}>
+            <button type="button" className={styles.bannerButton} onClick={handleRestoreDraft}>
+              Resume
+            </button>
+            <button type="button" className={styles.bannerDismiss} onClick={handleDiscardSavedDraft}>
+              Start fresh
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showDataWarning && (
+        <div className={`${styles.banner} ${styles.bannerWarning}`} role="alert">
+          <div className={styles.bannerText}>
+            <strong>Using sample data.</strong>
+            <span>
+              {projectionSystem === "thebat" ? "THE BAT" : projectionSystem.toUpperCase()} projections
+              couldn&apos;t be loaded, so mock players are shown instead.
+            </span>
+          </div>
+          <div className={styles.bannerActions}>
+            <button type="button" className={styles.bannerDismiss} onClick={() => setDataWarningDismissed(true)}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Grid Layout */}
       <main className={styles.dashboardGrid}>
