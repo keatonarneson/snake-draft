@@ -674,92 +674,80 @@ export default function DraftRoom() {
     handleSandboxChange,
   ]);
 
+  const projectionLabel = isUsingCsv
+    ? `${projectionSystem === "thebat" ? "THE BAT" : projectionSystem.toUpperCase()} loaded`
+    : "Mock data";
+
+  const headerStatus = !isDraftStarted
+    ? (isLiveDraftMode ? "Live setup" : "Draft setup")
+    : isDraftComplete
+      ? "Draft complete"
+      : isUserTurn
+        ? "Your turn"
+        : currentPick
+          ? teamNames[currentPick.teamIndex]
+          : "In progress";
+
+  const headerMeta = !isDraftStarted
+    ? `${numTeams} teams - ${numRounds} rounds`
+    : currentPick
+      ? `R${currentPick.round}, Pick ${currentPick.pickInRound}`
+      : "Ready";
+
   return (
     <div className={styles.container}>
       {/* Header Bar */}
       <header className={styles.header}>
         <div className={styles.logoArea}>
-          <h1 className={styles.logoTitle}>
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="url(#neon-grad)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ filter: "drop-shadow(0 0 6px rgba(99, 102, 241, 0.4))" }}
-            >
-              <defs>
-                <linearGradient id="neon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="var(--primary)" />
-                  <stop offset="100%" stopColor="var(--secondary)" />
-                </linearGradient>
-              </defs>
-              <circle cx="12" cy="12" r="10" />
-              <path d="M16.2 7.8A4.5 4.5 0 0 0 12 6.5a4.5 4.5 0 0 0-4.2 1.3" />
-              <path d="M7.8 16.2A4.5 4.5 0 0 0 12 17.5a4.5 4.5 0 0 0 4.2-1.3" />
-              <line x1="12" y1="6.5" x2="12" y2="17.5" />
+          <div className={styles.logoMark} aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 18V9" />
+              <path d="M9 18V5" />
+              <path d="M14 18v-7" />
+              <path d="M19 18V3" />
+              <path d="M4 14l5-5 5 3 5-7" />
             </svg>
-            DraftRadar
-          </h1>
-          <span className={styles.logoSubtitle}>Baseball Draft Engine</span>
-          <span 
-            className={styles.datasetBadge}
-            style={{
-              display: "inline-block",
-              marginLeft: "12px",
-              padding: "2px 8px",
-              borderRadius: "12px",
-              fontSize: "0.65rem",
-              fontWeight: 700,
-              backgroundColor: isUsingCsv ? "rgba(16, 185, 129, 0.15)" : "rgba(99, 102, 241, 0.15)",
-              color: isUsingCsv ? "var(--success)" : "var(--primary)",
-              border: `1px solid ${isUsingCsv ? "rgba(16, 185, 129, 0.3)" : "rgba(99, 102, 241, 0.3)"}`,
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              verticalAlign: "middle",
-              marginTop: "-2px"
-            }}
-          >
-            {isUsingCsv 
-              ? `${projectionSystem === "thebat" ? "THE BAT" : projectionSystem.toUpperCase()} LOADED` 
-              : "MOCK DATA"}
-          </span>
+          </div>
+          <div className={styles.brandText}>
+            <span className={styles.logoTitle}>DraftRadar</span>
+            <span className={styles.logoSubtitle}>Baseball Draft Engine</span>
+          </div>
+          <span className={styles.datasetBadge}>{projectionLabel}</span>
         </div>
 
-        {/* Current status ticker */}
-        <div className={styles.statusTicker} data-mode={draftMode}>
-          {!isDraftStarted ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <span className={styles.tickerLabel}>Status</span>
-              <span className={styles.tickerVal} style={{ color: "var(--secondary)" }}>
-                {isLiveDraftMode ? "Live Setup" : "Draft Setup"}
-              </span>
-            </div>
-          ) : isDraftComplete ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <span className={styles.tickerLabel}>Status</span>
-              <span className={styles.tickerVal} style={{ color: "var(--success)" }}>Draft Complete!</span>
-            </div>
-          ) : (
-            <>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <span className={styles.tickerLabel}>Current Pick</span>
-                <span className={styles.tickerVal}>
-                  {currentPick ? `R${currentPick.round} - P${currentPick.pickInRound}` : "Not Started"}
-                </span>
-              </div>
-              <div style={{ width: "1px", height: "30px", background: "var(--glass-border)" }} />
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <span className={styles.tickerLabel}>{isLiveDraftMode ? "Record Pick For" : "On The Clock"}</span>
-                <span className={styles.tickerSub} style={{ color: isUserTurn ? "var(--primary)" : "var(--secondary)" }}>
-                  {isUserTurn ? "YOUR TURN!" : currentPick ? teamNames[currentPick.teamIndex] : ""}
-                </span>
-              </div>
-            </>
-          )}
+        <nav className={styles.topWorkspaceTabs} aria-label="Draft workspace views" role="tablist">
+          {[
+            { id: "draft" as const, label: "Draft Room" },
+            { id: "plan" as const, label: "Targets" },
+            { id: "standings" as const, label: "Standings" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={styles.topWorkspaceTab}
+              data-active={activeCenterView === tab.id}
+              role="tab"
+              aria-selected={activeCenterView === tab.id}
+              onClick={() => setActiveCenterView(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className={styles.headerActions}>
+          <div className={styles.compactStatus}>
+            <span className={styles.tickerLabel}>Status</span>
+            <strong>{headerStatus}</strong>
+            <span className={styles.tickerSub}>{headerMeta}</span>
+            <span className={styles.statusDot} data-active={isDraftStarted && !isDraftComplete} />
+          </div>
+          <button type="button" className={styles.iconButton} aria-label="Settings" onClick={() => setActiveMobileSection("setup")}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -822,26 +810,6 @@ export default function DraftRoom() {
 
         {/* Center Column: Recommendations and Main Player Pool */}
         <section className={styles.mainSection} data-mobile-active={activeMobileSection === "draft"}>
-          <nav className={styles.centerViewTabs} aria-label="Draft workspace views" role="tablist">
-            {[
-              { id: "draft" as const, label: "Draft" },
-              { id: "plan" as const, label: "Plan" },
-              { id: "standings" as const, label: "Standings" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={styles.centerViewTab}
-                data-active={activeCenterView === tab.id}
-                role="tab"
-                aria-selected={activeCenterView === tab.id}
-                onClick={() => setActiveCenterView(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-
           {activeCenterView === "draft" && (
             <>
               <DashboardSummary

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { DraftPick } from "../../engine";
 import { Player } from "../../types/draft";
+import { ModalShell } from "../ui";
 
 interface EditPickModalProps {
   editingPick: DraftPick | null;
@@ -35,7 +35,6 @@ export default function EditPickModal({
 
   const isRecording = Boolean(editingPick) && !editingPick?.playerDraftedId;
 
-  // Focus the search box when the modal mounts (the parent remounts it per pick).
   useEffect(() => {
     const id = window.setTimeout(() => inputRef.current?.focus(), 0);
     return () => window.clearTimeout(id);
@@ -53,12 +52,10 @@ export default function EditPickModal({
       .slice(0, MAX_RESULTS);
   }, [search, editPlayerOptions]);
 
-  // Clamp the highlight to the current results without storing derived state.
   const safeHighlight = filteredPlayers.length === 0
     ? 0
     : Math.min(highlightIndex, filteredPlayers.length - 1);
 
-  // Keep the highlighted row scrolled into view.
   useEffect(() => {
     const container = listRef.current;
     if (!container) return;
@@ -66,7 +63,7 @@ export default function EditPickModal({
     activeRow?.scrollIntoView({ block: "nearest" });
   }, [safeHighlight, filteredPlayers]);
 
-  if (!editingPick || typeof document === "undefined") return null;
+  if (!editingPick) return null;
 
   const commitPlayer = (playerId: string) => {
     onPlayerChange(playerId);
@@ -96,144 +93,19 @@ export default function EditPickModal({
     }
   };
 
-  return createPortal((
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(8, 11, 17, 0.74)",
-        backdropFilter: "blur(8px)",
-        zIndex: 10000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-      }}
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${isRecording ? "Record" : "Edit"} pick ${editingPick.overallPick}`}
-        style={{
-          width: "min(520px, 100%)",
-          background: "#111827",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          borderRadius: "12px",
-          boxShadow: "0 24px 60px rgba(0, 0, 0, 0.55)",
-          padding: "20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "14px",
-        }}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "var(--text-primary)" }}>
-              {isRecording ? "Record" : "Edit"} Pick #{editingPick.overallPick}
-            </h3>
-            <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-              Round {editingPick.round}, Pick {editingPick.pickInRound} - {teamName}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "none",
-              color: "var(--text-muted)",
-              width: "30px",
-              height: "30px",
-              borderRadius: "50%",
-              cursor: "pointer",
-              fontSize: "1rem",
-            }}
-          >
-            &times;
-          </button>
-        </div>
-
-        <input
-          ref={inputRef}
-          className="premium-input"
-          type="text"
-          value={search}
-          placeholder="Search by name, team, or position..."
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setHighlightIndex(0);
-          }}
-          style={{ width: "100%" }}
-        />
-
-        <div
-          ref={listRef}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "2px",
-            maxHeight: "320px",
-            overflowY: "auto",
-            border: "1px solid rgba(255, 255, 255, 0.06)",
-            borderRadius: "8px",
-            padding: "4px",
-            background: "rgba(0, 0, 0, 0.2)",
-          }}
-        >
-          {filteredPlayers.length === 0 ? (
-            <div style={{ padding: "16px", textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)" }}>
-              No available players match &ldquo;{search}&rdquo;.
-            </div>
-          ) : (
-            filteredPlayers.map((player, index) => {
-              const isHighlighted = index === safeHighlight;
-              const isCurrent = player.id === editPlayerId;
-              return (
-                <button
-                  key={player.id}
-                  type="button"
-                  data-highlighted={isHighlighted}
-                  onMouseEnter={() => setHighlightIndex(index)}
-                  onClick={() => commitPlayer(player.id)}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: "10px",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "8px 10px",
-                    borderRadius: "6px",
-                    border: isCurrent ? "1px solid var(--primary)" : "1px solid transparent",
-                    background: isHighlighted ? "rgba(99, 102, 241, 0.18)" : "transparent",
-                    color: "var(--text-primary)",
-                    cursor: "pointer",
-                    transition: "background 0.1s ease",
-                  }}
-                >
-                  <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
-                    <span style={{ fontSize: "0.85rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {player.name}
-                    </span>
-                    <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>
-                      {player.team} &middot; {player.positions.join("/")} &middot; ADP {player.adp.toFixed(0)}
-                    </span>
-                  </span>
-                  <span style={{ fontSize: "0.78rem", fontWeight: 700, fontFamily: "var(--font-mono)", color: player.value < 0 ? "var(--danger)" : "var(--success)" }}>
-                    ${player.value.toFixed(1)}
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
-
+  return (
+    <ModalShell
+      isOpen={Boolean(editingPick)}
+      title={`${isRecording ? "Record" : "Edit"} Pick #${editingPick.overallPick}`}
+      subtitle={`Round ${editingPick.round}, Pick ${editingPick.pickInRound} - ${teamName}`}
+      ariaLabel={`${isRecording ? "Record" : "Edit"} pick ${editingPick.overallPick}`}
+      width="min(520px, 100%)"
+      onClose={onClose}
+      onKeyDown={handleKeyDown}
+      footer={
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
           <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-            ↑↓ to navigate &middot; Enter to {isRecording ? "record" : "save"} &middot; Esc to close
+            Up/Down to navigate - Enter to {isRecording ? "record" : "save"} - Esc to close
           </span>
           <div style={{ display: "flex", gap: "10px" }}>
             <button className="btn btn-secondary" type="button" onClick={onClose}>
@@ -252,7 +124,82 @@ export default function EditPickModal({
             </button>
           </div>
         </div>
+      }
+    >
+      <input
+        ref={inputRef}
+        className="premium-input"
+        type="text"
+        value={search}
+        placeholder="Search by name, team, or position..."
+        onChange={(event) => {
+          setSearch(event.target.value);
+          setHighlightIndex(0);
+        }}
+        style={{ width: "100%" }}
+      />
+
+      <div
+        ref={listRef}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "2px",
+          maxHeight: "320px",
+          overflowY: "auto",
+          border: "1px solid rgba(255, 255, 255, 0.06)",
+          borderRadius: "8px",
+          padding: "4px",
+          background: "rgba(0, 0, 0, 0.2)",
+        }}
+      >
+        {filteredPlayers.length === 0 ? (
+          <div style={{ padding: "16px", textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+            No available players match &quot;{search}&quot;.
+          </div>
+        ) : (
+          filteredPlayers.map((player, index) => {
+            const isHighlighted = index === safeHighlight;
+            const isCurrent = player.id === editPlayerId;
+            return (
+              <button
+                key={player.id}
+                type="button"
+                data-highlighted={isHighlighted}
+                onMouseEnter={() => setHighlightIndex(index)}
+                onClick={() => commitPlayer(player.id)}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "10px",
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "8px 10px",
+                  borderRadius: "6px",
+                  border: isCurrent ? "1px solid var(--primary)" : "1px solid transparent",
+                  background: isHighlighted ? "rgba(99, 102, 241, 0.18)" : "transparent",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                  transition: "background 0.1s ease",
+                }}
+              >
+                <span style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+                  <span style={{ fontSize: "0.85rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {player.name}
+                  </span>
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>
+                    {player.team} - {player.positions.join("/")} - ADP {player.adp.toFixed(0)}
+                  </span>
+                </span>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, fontFamily: "var(--font-mono)", color: player.value < 0 ? "var(--danger)" : "var(--success)" }}>
+                  ${player.value.toFixed(1)}
+                </span>
+              </button>
+            );
+          })
+        )}
       </div>
-    </div>
-  ), document.body);
+    </ModalShell>
+  );
 }

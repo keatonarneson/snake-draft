@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { DisclosureSection, NumberField } from "../ui";
 
 export interface TargetBenchmarks {
   R: number;
@@ -28,9 +29,73 @@ const DEFAULT_TARGETS: TargetBenchmarks = {
   WHIP: 1.20,
 };
 
+const HITTING_FIELDS: {
+  key: keyof TargetBenchmarks;
+  label: string;
+  parse?: "int" | "float";
+  step?: string;
+}[] = [
+  { key: "R", label: "Runs (R)" },
+  { key: "HR", label: "Home Runs (HR)" },
+  { key: "RBI", label: "RBI" },
+  { key: "SB", label: "Stolen Bases (SB)" },
+  { key: "AVG", label: "Average (AVG)", parse: "float", step: "0.001" },
+];
+
+const PITCHING_FIELDS: typeof HITTING_FIELDS = [
+  { key: "W", label: "Wins (W)" },
+  { key: "SV", label: "Saves (SV)" },
+  { key: "SO", label: "Strikeouts (SO)" },
+  { key: "ERA", label: "ERA", parse: "float", step: "0.01" },
+  { key: "WHIP", label: "WHIP", parse: "float", step: "0.01" },
+];
+
 interface TargetBenchmarksSectionProps {
   targets: TargetBenchmarks;
   onTargetsChange: (targets: TargetBenchmarks) => void;
+}
+
+function TargetColumn({
+  title,
+  color,
+  fields,
+  targets,
+  onTargetsChange,
+}: {
+  title: string;
+  color: string;
+  fields: typeof HITTING_FIELDS;
+  targets: TargetBenchmarks;
+  onTargetsChange: (targets: TargetBenchmarks) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      <span
+        style={{
+          fontSize: "0.7rem",
+          fontWeight: 700,
+          color,
+          borderBottom: `1px solid ${color === "var(--primary)" ? "rgba(99, 102, 241, 0.15)" : "rgba(6, 182, 212, 0.15)"}`,
+          paddingBottom: "2px",
+          letterSpacing: "0.05em",
+        }}
+      >
+        {title}
+      </span>
+
+      {fields.map((field) => (
+        <NumberField
+          key={field.key}
+          compact
+          label={field.label}
+          value={targets[field.key]}
+          parse={field.parse}
+          step={field.step}
+          onValueChange={(value) => onTargetsChange({ ...targets, [field.key]: value })}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default function TargetBenchmarksSection({
@@ -40,206 +105,48 @@ export default function TargetBenchmarksSection({
   const [isTargetsOpen, setIsTargetsOpen] = useState(false);
 
   return (
-    <div style={{ borderTop: "1px solid var(--glass-border)", paddingTop: "12px", marginTop: "4px" }}>
+    <DisclosureSection
+      title="Target Category Benchmarks"
+      isOpen={isTargetsOpen}
+      onToggle={() => setIsTargetsOpen(!isTargetsOpen)}
+      icon={
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      }
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <TargetColumn
+          title="HITTING"
+          color="var(--primary)"
+          fields={HITTING_FIELDS}
+          targets={targets}
+          onTargetsChange={onTargetsChange}
+        />
+        <TargetColumn
+          title="PITCHING"
+          color="var(--secondary)"
+          fields={PITCHING_FIELDS}
+          targets={targets}
+          onTargetsChange={onTargetsChange}
+        />
+      </div>
+
       <button
         type="button"
-        onClick={() => setIsTargetsOpen(!isTargetsOpen)}
+        className="btn btn-secondary"
+        onClick={() => onTargetsChange({ ...DEFAULT_TARGETS })}
         style={{
-          width: "100%",
-          background: "none",
-          border: "none",
-          color: "var(--text-primary)",
-          fontWeight: 600,
-          fontSize: "0.85rem",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          cursor: "pointer",
-          padding: "4px 0",
-          outline: "none"
+          padding: "6px 10px",
+          fontSize: "0.75rem",
+          marginTop: "4px",
+          alignSelf: "flex-end",
         }}
       >
-        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          Target Category Benchmarks
-        </span>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--text-secondary)"
-          strokeWidth="2.5"
-          style={{
-            transform: isTargetsOpen ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.2s ease"
-          }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        Reset Targets to Default
       </button>
-
-      {isTargetsOpen && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            {/* Hitting Column */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--primary)", borderBottom: "1px solid rgba(99, 102, 241, 0.15)", paddingBottom: "2px", letterSpacing: "0.05em" }}>
-                HITTING
-              </span>
-
-              {/* R */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Runs (R)</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  value={targets.R}
-                  onChange={(e) => onTargetsChange({ ...targets, R: parseInt(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-
-              {/* HR */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Home Runs (HR)</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  value={targets.HR}
-                  onChange={(e) => onTargetsChange({ ...targets, HR: parseInt(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-
-              {/* RBI */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>RBI</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  value={targets.RBI}
-                  onChange={(e) => onTargetsChange({ ...targets, RBI: parseInt(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-
-              {/* SB */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Stolen Bases (SB)</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  value={targets.SB}
-                  onChange={(e) => onTargetsChange({ ...targets, SB: parseInt(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-
-              {/* AVG */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Average (AVG)</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  step="0.001"
-                  value={targets.AVG}
-                  onChange={(e) => onTargetsChange({ ...targets, AVG: parseFloat(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-            </div>
-
-            {/* Pitching Column */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--secondary)", borderBottom: "1px solid rgba(6, 182, 212, 0.15)", paddingBottom: "2px", letterSpacing: "0.05em" }}>
-                PITCHING
-              </span>
-
-              {/* W */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Wins (W)</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  value={targets.W}
-                  onChange={(e) => onTargetsChange({ ...targets, W: parseInt(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-
-              {/* SV */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Saves (SV)</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  value={targets.SV}
-                  onChange={(e) => onTargetsChange({ ...targets, SV: parseInt(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-
-              {/* SO */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Strikeouts (SO)</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  value={targets.SO}
-                  onChange={(e) => onTargetsChange({ ...targets, SO: parseInt(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-
-              {/* ERA */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>ERA</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  step="0.01"
-                  value={targets.ERA}
-                  onChange={(e) => onTargetsChange({ ...targets, ERA: parseFloat(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-
-              {/* WHIP */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <label style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>WHIP</label>
-                <input
-                  className="premium-input"
-                  type="number"
-                  step="0.01"
-                  value={targets.WHIP}
-                  onChange={(e) => onTargetsChange({ ...targets, WHIP: parseFloat(e.target.value) || 0 })}
-                  style={{ padding: "4px 8px", fontSize: "0.8rem", width: "100%" }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Reset Targets Button */}
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => onTargetsChange({ ...DEFAULT_TARGETS })}
-            style={{
-              padding: "6px 10px",
-              fontSize: "0.75rem",
-              marginTop: "4px",
-              alignSelf: "flex-end"
-            }}
-          >
-            Reset Targets to Default
-          </button>
-        </div>
-      )}
-    </div>
+    </DisclosureSection>
   );
 }
