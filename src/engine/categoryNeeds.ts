@@ -1,17 +1,8 @@
 import { Player } from "../types/draft";
+import { ACTIVE_BATTER_SLOTS, ACTIVE_PITCHER_SLOTS, LEAGUE_TARGETS } from "./config";
 
-export const TARGETS = {
-  R: 1125,
-  HR: 315,
-  RBI: 1103,
-  SB: 190,
-  AVG: 0.263,
-  W: 93,
-  SV: 88,
-  SO: 1275,
-  ERA: 3.65,
-  WHIP: 1.20,
-};
+// Re-exported under the historical name so existing engine/UI imports keep working.
+export const TARGETS = LEAGUE_TARGETS;
 
 export interface CategoryNeeds {
   HR: number;
@@ -65,8 +56,8 @@ export function calculateCategoryNeeds(
   const currentERA = totalIP > 0 ? sumERA / totalIP : 3.80;
   const currentWHIP = totalIP > 0 ? sumWHIP / totalIP : 1.20;
 
-  const batterFillRatio = Math.min(1.0, battersCount / 14);
-  const pitcherFillRatio = Math.min(1.0, pitchersCount / 9);
+  const batterFillRatio = Math.min(1.0, battersCount / ACTIVE_BATTER_SLOTS);
+  const pitcherFillRatio = Math.min(1.0, pitchersCount / ACTIVE_PITCHER_SLOTS);
 
   const getNeedFactor = (current: number, target: number, fillRatio: number) => {
     if (fillRatio === 0) return 1.0;

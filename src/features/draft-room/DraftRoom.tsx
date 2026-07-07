@@ -16,6 +16,8 @@ import {
   getCpuProfile,
   getCpuProfileTemplates,
   selectCpuPick,
+  LEAGUE_TARGETS,
+  type LeagueTargets,
 } from "../../engine";
 import SettingsPanel from "../../components/SettingsPanel";
 import { SandboxSettingsProvider } from "../../components/settings-panel";
@@ -28,38 +30,14 @@ import { useDraftState } from "../../hooks/useDraftState";
 import { useDraftTargets } from "../../hooks/useDraftTargets";
 import { useProjectionLoader } from "../../hooks/useProjectionLoader";
 import { usePersistedSnapshot } from "../../hooks/usePersistedSnapshot";
+import { usePlayerMap } from "../../hooks/usePlayerMap";
+import { useSandboxSettingsState, type SandboxSnapshot } from "./useSandboxSettingsState";
 import type { ProjectionSystem } from "../../data/projections";
-
-interface SandboxPreset {
-  trustProjections: number;
-  draftUrgency: number;
-  categoryBalance: number;
-  rosterFit: number;
-  positionScarcity: number;
-  riskStyle: "safe" | "balanced" | "aggressive";
-  reachTolerance: number;
-  savesStrategy: "wait" | "balanced" | "aggressive";
-  rankScarcityCoeff: number;
-}
 
 type CpuProfileMode = "fixed" | "random";
 type DraftMode = "mock" | "live";
 type MobileSection = "setup" | "draft" | "roster";
 type CenterView = "draft" | "plan" | "standings";
-
-const DEFAULT_TARGETS = {
-  R: 1125,
-  HR: 315,
-  RBI: 1103,
-  SB: 190,
-  AVG: 0.263,
-  W: 93,
-  SV: 88,
-  SO: 1275,
-  ERA: 3.65,
-  WHIP: 1.2,
-};
-type TargetBenchmarks = typeof DEFAULT_TARGETS;
 
 // Bump when the snapshot shape changes so stale saves are discarded on load.
 const SNAPSHOT_VERSION = 1;
@@ -76,92 +54,12 @@ interface DraftSnapshot {
   draftMode: DraftMode;
   cpuProfileMode: CpuProfileMode;
   projectionSystem: ProjectionSystem;
-  targets: TargetBenchmarks;
-  sandbox: {
-    trustProjections: number;
-    draftUrgency: number;
-    categoryBalance: number;
-    rosterFit: number;
-    positionScarcity: number;
-    riskStyle: "safe" | "balanced" | "aggressive";
-    reachTolerance: number;
-    savesStrategy: "wait" | "balanced" | "aggressive";
-    rankScarcityCoeff: number;
-    activePreset: string;
-  };
+  targets: LeagueTargets;
+  sandbox: SandboxSnapshot;
   cpuProfiles: CpuProfile[];
   cpuSavesStrategies: string[];
   projectionOverrides: Record<string, Partial<PlayerStats>>;
 }
-
-const PRESETS: Record<string, SandboxPreset> = {
-  balanced: {
-    trustProjections: 1.0,
-    draftUrgency: 1.0,
-    categoryBalance: 1.0,
-    rosterFit: 1.0,
-    positionScarcity: 1.0,
-    riskStyle: "balanced",
-    reachTolerance: 1.0,
-    savesStrategy: "balanced",
-    rankScarcityCoeff: 0.15,
-  },
-  value_hunter: {
-    trustProjections: 1.6,
-    draftUrgency: 0.2,
-    categoryBalance: 0.3,
-    rosterFit: 0.3,
-    positionScarcity: 0.3,
-    riskStyle: "safe",
-    reachTolerance: 0.2,
-    savesStrategy: "wait",
-    rankScarcityCoeff: 0.05,
-  },
-  market_realist: {
-    trustProjections: 1.0,
-    draftUrgency: 1.6,
-    categoryBalance: 1.0,
-    rosterFit: 1.0,
-    positionScarcity: 1.6,
-    riskStyle: "balanced",
-    reachTolerance: 1.6,
-    savesStrategy: "balanced",
-    rankScarcityCoeff: 0.25,
-  },
-  category_builder: {
-    trustProjections: 1.0,
-    draftUrgency: 1.0,
-    categoryBalance: 1.6,
-    rosterFit: 1.6,
-    positionScarcity: 1.0,
-    riskStyle: "balanced",
-    reachTolerance: 1.0,
-    savesStrategy: "balanced",
-    rankScarcityCoeff: 0.15,
-  },
-  upside_chaser: {
-    trustProjections: 0.5,
-    draftUrgency: 1.0,
-    categoryBalance: 1.0,
-    rosterFit: 0.5,
-    positionScarcity: 1.0,
-    riskStyle: "aggressive",
-    reachTolerance: 1.6,
-    savesStrategy: "wait",
-    rankScarcityCoeff: 0.15,
-  },
-  safe_draft: {
-    trustProjections: 1.5,
-    draftUrgency: 0.4,
-    categoryBalance: 1.0,
-    rosterFit: 1.5,
-    positionScarcity: 1.0,
-    riskStyle: "safe",
-    reachTolerance: 0.4,
-    savesStrategy: "balanced",
-    rankScarcityCoeff: 0.10,
-  },
-};
 
 export default function DraftRoom() {
   // ----------------------------------------------------
@@ -173,22 +71,25 @@ export default function DraftRoom() {
   const [draftMode, setDraftMode] = useState<DraftMode>("mock");
   const [simSpeed, setSimSpeed] = useState<"manual" | "paced" | "instant">("paced");
   const [cpuProfileMode, setCpuProfileMode] = useState<CpuProfileMode>("fixed");
-  
-  // Sandbox Algorithmic Weights (Simplified Knobs)
-  const [trustProjections, setTrustProjections] = useState(1.0);
-  const [draftUrgency, setDraftUrgency] = useState(1.0);
-  const [categoryBalance, setCategoryBalance] = useState(1.0);
-  const [rosterFit, setRosterFit] = useState(1.0);
-  const [positionScarcityWeight, setPositionScarcityWeight] = useState(1.0);
-  const [riskStyle, setRiskStyle] = useState<"safe" | "balanced" | "aggressive">("balanced");
-  const [reachTolerance, setReachTolerance] = useState(1.0);
-  const [savesStrategy, setSavesStrategy] = useState<"wait" | "balanced" | "aggressive">("balanced");
-  const [rankScarcityCoeff, setRankScarcityCoeff] = useState(0.15);
-  
-  const [activePreset, setActivePreset] = useState<string>("balanced");
-  
+
+  // Algorithm-sandbox weights + presets live in their own hook.
+  const {
+    trustProjections,
+    draftUrgency,
+    categoryBalance,
+    rosterFit,
+    positionScarcityWeight,
+    riskStyle,
+    reachTolerance,
+    savesStrategy,
+    rankScarcityCoeff,
+    contextValue: sandboxValue,
+    snapshot: sandboxSnapshot,
+    restoreSandbox,
+  } = useSandboxSettingsState();
+
   // Custom Target Benchmarks
-  const [targets, setTargets] = useState<TargetBenchmarks>(DEFAULT_TARGETS);
+  const [targets, setTargets] = useState<LeagueTargets>(LEAGUE_TARGETS);
   
   const [cpuSavesStrategies, setCpuSavesStrategies] = useState<string[]>([]);
   const [cpuProfiles, setCpuProfiles] = useState<CpuProfile[]>([]);
@@ -292,6 +193,7 @@ export default function DraftRoom() {
   // ----------------------------------------------------
   // Derivations & Calculations
   // ----------------------------------------------------
+  const playerMap = usePlayerMap(players);
   const isUserTurn = !isDraftComplete && currentPick?.teamIndex === userPosition - 1;
   const canRecordPick = isDraftStarted && !isDraftComplete;
   const playerActionLabel = isLiveDraftMode ? "Mark Drafted" : undefined;
@@ -299,7 +201,6 @@ export default function DraftRoom() {
   // List of already drafted players with extra details
   const draftedPlayersDetails = useMemo(() => {
     const list: { player: Player; overallPick: number; round: number; teamName: string; teamIndex: number }[] = [];
-    const playerMap = new Map(players.map((p) => [p.id, p]));
 
     picks.slice(0, currentPickIndex).forEach((pick) => {
       if (pick.playerDraftedId) {
@@ -317,7 +218,7 @@ export default function DraftRoom() {
     });
 
     return list;
-  }, [picks, currentPickIndex, players, teamNames]);
+  }, [picks, currentPickIndex, playerMap, teamNames]);
 
   // Available players pool
   const availablePlayers = useMemo(() => {
@@ -458,10 +359,9 @@ export default function DraftRoom() {
     }
 
     if (finalCpuScore === undefined && pick) {
-      const playerObj = players.find(p => p.id === playerId);
+      const playerObj = playerMap.get(playerId);
       if (playerObj) {
         const teamIndex = pick.teamIndex;
-        const playerMap = new Map(players.map((p) => [p.id, p]));
         const priorRoster = draftPicks
           .slice(0, pickIndex)
           .filter((draftPick) => draftPick.teamIndex === teamIndex && draftPick.playerDraftedId)
@@ -602,118 +502,9 @@ export default function DraftRoom() {
     initDraft(numTeams, numRounds, userPosition);
   };
 
-  const checkAndSetActivePreset = (
-    trust: number,
-    urgency: number,
-    balance: number,
-    fit: number,
-    scarcity: number,
-    risk: "safe" | "balanced" | "aggressive",
-    reach: number,
-    saves: "wait" | "balanced" | "aggressive",
-    rankScarcity: number
-  ) => {
-    let matchedPreset = "custom";
-    for (const [key, preset] of Object.entries(PRESETS)) {
-      if (
-        preset.trustProjections === trust &&
-        preset.draftUrgency === urgency &&
-        preset.categoryBalance === balance &&
-        preset.rosterFit === fit &&
-        preset.positionScarcity === scarcity &&
-        preset.riskStyle === risk &&
-        preset.reachTolerance === reach &&
-        preset.savesStrategy === saves &&
-        preset.rankScarcityCoeff === rankScarcity
-      ) {
-        matchedPreset = key;
-        break;
-      }
-    }
-    setActivePreset(matchedPreset);
-  };
-
-  const handleSandboxChange = useCallback((changes: {
-    trustProjections?: number;
-    draftUrgency?: number;
-    categoryBalance?: number;
-    rosterFit?: number;
-    positionScarcity?: number;
-    riskStyle?: "safe" | "balanced" | "aggressive";
-    reachTolerance?: number;
-    savesStrategy?: "wait" | "balanced" | "aggressive";
-    rankScarcityCoeff?: number;
-  }) => {
-    const newTrust = changes.trustProjections !== undefined ? changes.trustProjections : trustProjections;
-    const newUrgency = changes.draftUrgency !== undefined ? changes.draftUrgency : draftUrgency;
-    const newBalance = changes.categoryBalance !== undefined ? changes.categoryBalance : categoryBalance;
-    const newFit = changes.rosterFit !== undefined ? changes.rosterFit : rosterFit;
-    const newScarcity = changes.positionScarcity !== undefined ? changes.positionScarcity : positionScarcityWeight;
-    const newRisk = changes.riskStyle !== undefined ? changes.riskStyle : riskStyle;
-    const newReach = changes.reachTolerance !== undefined ? changes.reachTolerance : reachTolerance;
-    const newSaves = changes.savesStrategy !== undefined ? changes.savesStrategy : savesStrategy;
-    const newRankScarcity = changes.rankScarcityCoeff !== undefined ? changes.rankScarcityCoeff : rankScarcityCoeff;
-
-    if (changes.trustProjections !== undefined) setTrustProjections(changes.trustProjections);
-    if (changes.draftUrgency !== undefined) setDraftUrgency(changes.draftUrgency);
-    if (changes.categoryBalance !== undefined) setCategoryBalance(changes.categoryBalance);
-    if (changes.rosterFit !== undefined) setRosterFit(changes.rosterFit);
-    if (changes.positionScarcity !== undefined) setPositionScarcityWeight(changes.positionScarcity);
-    if (changes.riskStyle !== undefined) setRiskStyle(changes.riskStyle);
-    if (changes.reachTolerance !== undefined) setReachTolerance(changes.reachTolerance);
-    if (changes.savesStrategy !== undefined) setSavesStrategy(changes.savesStrategy);
-    if (changes.rankScarcityCoeff !== undefined) setRankScarcityCoeff(changes.rankScarcityCoeff);
-
-    checkAndSetActivePreset(newTrust, newUrgency, newBalance, newFit, newScarcity, newRisk, newReach, newSaves, newRankScarcity);
-  }, [trustProjections, draftUrgency, categoryBalance, rosterFit, positionScarcityWeight, riskStyle, reachTolerance, savesStrategy, rankScarcityCoeff]);
-
-  const handlePresetSelect = useCallback((presetName: string) => {
-    const preset = PRESETS[presetName];
-    if (preset) {
-      setTrustProjections(preset.trustProjections);
-      setDraftUrgency(preset.draftUrgency);
-      setCategoryBalance(preset.categoryBalance);
-      setRosterFit(preset.rosterFit);
-      setPositionScarcityWeight(preset.positionScarcity);
-      setRiskStyle(preset.riskStyle);
-      setReachTolerance(preset.reachTolerance);
-      setSavesStrategy(preset.savesStrategy);
-      setRankScarcityCoeff(preset.rankScarcityCoeff);
-      setActivePreset(presetName);
-    }
-  }, []);
-
   const handleReset = () => {
     initDraft(numTeams, numRounds, userPosition);
   };
-
-  const sandboxValue = useMemo(() => ({
-    trustProjections,
-    draftUrgency,
-    categoryBalance,
-    rosterFit,
-    positionScarcity: positionScarcityWeight,
-    riskStyle,
-    reachTolerance,
-    savesStrategy,
-    rankScarcityCoeff,
-    activePreset,
-    onPresetSelect: handlePresetSelect,
-    onSandboxChange: handleSandboxChange,
-  }), [
-    trustProjections,
-    draftUrgency,
-    categoryBalance,
-    rosterFit,
-    positionScarcityWeight,
-    riskStyle,
-    reachTolerance,
-    savesStrategy,
-    rankScarcityCoeff,
-    activePreset,
-    handlePresetSelect,
-    handleSandboxChange,
-  ]);
 
   // ----------------------------------------------------
   // Persistence (localStorage) + data-load warning
@@ -733,18 +524,7 @@ export default function DraftRoom() {
     cpuProfileMode,
     projectionSystem,
     targets,
-    sandbox: {
-      trustProjections,
-      draftUrgency,
-      categoryBalance,
-      rosterFit,
-      positionScarcity: positionScarcityWeight,
-      riskStyle,
-      reachTolerance,
-      savesStrategy,
-      rankScarcityCoeff,
-      activePreset,
-    },
+    sandbox: sandboxSnapshot,
     cpuProfiles,
     cpuSavesStrategies,
     projectionOverrides,
@@ -759,16 +539,7 @@ export default function DraftRoom() {
     cpuProfileMode,
     projectionSystem,
     targets,
-    trustProjections,
-    draftUrgency,
-    categoryBalance,
-    rosterFit,
-    positionScarcityWeight,
-    riskStyle,
-    reachTolerance,
-    savesStrategy,
-    rankScarcityCoeff,
-    activePreset,
+    sandboxSnapshot,
     cpuProfiles,
     cpuSavesStrategies,
     projectionOverrides,
@@ -802,18 +573,7 @@ export default function DraftRoom() {
     setCpuProfileMode(savedDraft.cpuProfileMode);
     setProjectionSystem(savedDraft.projectionSystem);
     setTargets(savedDraft.targets);
-
-    const s = savedDraft.sandbox;
-    setTrustProjections(s.trustProjections);
-    setDraftUrgency(s.draftUrgency);
-    setCategoryBalance(s.categoryBalance);
-    setRosterFit(s.rosterFit);
-    setPositionScarcityWeight(s.positionScarcity);
-    setRiskStyle(s.riskStyle);
-    setReachTolerance(s.reachTolerance);
-    setSavesStrategy(s.savesStrategy);
-    setRankScarcityCoeff(s.rankScarcityCoeff);
-    setActivePreset(s.activePreset);
+    restoreSandbox(savedDraft.sandbox);
 
     setCpuProfiles(savedDraft.cpuProfiles);
     setCpuSavesStrategies(savedDraft.cpuSavesStrategies);
@@ -823,7 +583,7 @@ export default function DraftRoom() {
     setSimSpeed("manual");
     loadDraft(savedDraft.picks, savedDraft.currentPickIndex, savedDraft.isDraftStarted);
     setRestoreDismissed(true);
-  }, [savedDraft, loadDraft, setProjectionSystem]);
+  }, [savedDraft, loadDraft, setProjectionSystem, restoreSandbox]);
 
   const handleDiscardSavedDraft = useCallback(() => {
     clearSaved();

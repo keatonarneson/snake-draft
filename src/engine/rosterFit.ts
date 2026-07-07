@@ -1,7 +1,10 @@
 import { Player } from "../types/draft";
+import { canPlayerFillSlot, ROSTER_SLOT_SPECS } from "./rosterConfig";
 
 /**
- * Fit players into active roster slots.
+ * Fit players into active roster slots by descending value (auto-allocation for
+ * engine scoring). Manual slot assignments are handled separately by
+ * rosterSlots.buildRosterSlots.
  */
 export function fitRoster(
   teamPlayers: Player[],
@@ -9,49 +12,15 @@ export function fitRoster(
 ): { active: Player[]; bench: Player[] } {
   void _numRounds;
 
-  const activeSlots = [
-    // Specific hitter slots (Priority 1)
-    { label: "C1", isPitcher: false, positions: ["C"], priority: 1 },
-    { label: "C2", isPitcher: false, positions: ["C"], priority: 1 },
-    { label: "1B", isPitcher: false, positions: ["1B"], priority: 1 },
-    { label: "2B", isPitcher: false, positions: ["2B"], priority: 1 },
-    { label: "3B", isPitcher: false, positions: ["3B"], priority: 1 },
-    { label: "SS", isPitcher: false, positions: ["SS"], priority: 1 },
-    { label: "OF1", isPitcher: false, positions: ["OF"], priority: 1 },
-    { label: "OF2", isPitcher: false, positions: ["OF"], priority: 1 },
-    { label: "OF3", isPitcher: false, positions: ["OF"], priority: 1 },
-    { label: "OF4", isPitcher: false, positions: ["OF"], priority: 1 },
-    { label: "OF5", isPitcher: false, positions: ["OF"], priority: 1 },
-
-    // Semi-flexible hitter slots (Priority 2)
-    { label: "CI", isPitcher: false, positions: ["1B", "3B"], priority: 2 },
-    { label: "MI", isPitcher: false, positions: ["2B", "SS"], priority: 2 },
-
-    // Fully flexible hitter slot (Priority 3)
-    { label: "UT", isPitcher: false, positions: ["1B", "2B", "3B", "SS", "OF", "UT"], priority: 3 },
-
-    // Pitchers slots (Priority 1)
-    { label: "P1", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
-    { label: "P2", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
-    { label: "P3", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
-    { label: "P4", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
-    { label: "P5", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
-    { label: "P6", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
-    { label: "P7", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
-    { label: "P8", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
-    { label: "P9", isPitcher: true, positions: ["SP", "RP"], priority: 1 },
-  ];
+  const activeSlots = ROSTER_SLOT_SPECS;
 
   const sortedPlayers = [...teamPlayers].sort((a, b) => b.value - a.value);
   const active: Player[] = [];
   const bench: Player[] = [];
 
   const filledSlots = new Set<number>();
-  const canPlayerUseSlot = (player: Player, slot: typeof activeSlots[number]) => {
-    if (player.isPitcher !== slot.isPitcher) return false;
-    if (player.positions.includes("C") && !slot.positions.includes("C")) return false;
-    return player.positions.some(pos => slot.positions.includes(pos));
-  };
+  const canPlayerUseSlot = (player: Player, slot: typeof activeSlots[number]) =>
+    canPlayerFillSlot(player, slot.isPitcher, slot.positions);
 
   for (const player of sortedPlayers) {
     let placed = false;

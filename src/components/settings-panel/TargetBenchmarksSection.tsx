@@ -2,32 +2,11 @@
 
 import React, { useState } from "react";
 import { DisclosureSection, NumberField } from "../ui";
+import { LEAGUE_TARGETS, type LeagueTargets } from "../../engine/config";
 
-export interface TargetBenchmarks {
-  R: number;
-  HR: number;
-  RBI: number;
-  SB: number;
-  AVG: number;
-  W: number;
-  SV: number;
-  SO: number;
-  ERA: number;
-  WHIP: number;
-}
+export type TargetBenchmarks = LeagueTargets;
 
-const DEFAULT_TARGETS: TargetBenchmarks = {
-  R: 1125,
-  HR: 315,
-  RBI: 1103,
-  SB: 190,
-  AVG: 0.263,
-  W: 93,
-  SV: 88,
-  SO: 1275,
-  ERA: 3.65,
-  WHIP: 1.20,
-};
+const DEFAULT_TARGETS: TargetBenchmarks = LEAGUE_TARGETS;
 
 const HITTING_FIELDS: {
   key: keyof TargetBenchmarks;

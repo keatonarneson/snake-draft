@@ -7,4 +7,4 @@ export { default as EditPickModal } from "./EditPickModal";
 export { useDraftLogState } from "./useDraftLogState";
 export { useEditPickState } from "./useEditPickState";
 export { usePicksUntilUser } from "./usePicksUntilUser";
-export { usePlayerMap } from "./usePlayerMap";
+export { usePlayerMap } from "../../hooks/usePlayerMap";

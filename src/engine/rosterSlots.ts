@@ -1,30 +1,12 @@
 import { Player } from "../types/draft";
+import { canPlayerFillSlot, ROSTER_SLOT_SPECS } from "./rosterConfig";
 
-export const ROSTER_SLOTS = [
-  { label: "C", type: "batter", positions: ["C"] },
-  { label: "C", type: "batter", positions: ["C"] },
-  { label: "1B", type: "batter", positions: ["1B"] },
-  { label: "2B", type: "batter", positions: ["2B"] },
-  { label: "3B", type: "batter", positions: ["3B"] },
-  { label: "SS", type: "batter", positions: ["SS"] },
-  { label: "CI", type: "batter", positions: ["1B", "3B"] },
-  { label: "MI", type: "batter", positions: ["2B", "SS"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "OF", type: "batter", positions: ["OF"] },
-  { label: "UT", type: "batter", positions: ["1B", "2B", "3B", "SS", "OF", "UT"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-  { label: "P", type: "pitcher", positions: ["SP", "RP"] },
-];
+// Display-oriented view of the shared slot layout (see rosterConfig).
+export const ROSTER_SLOTS = ROSTER_SLOT_SPECS.map((slot) => ({
+  label: slot.label,
+  type: slot.isPitcher ? "pitcher" : "batter",
+  positions: slot.positions,
+}));
 
 export type RosterSlotDefinition = typeof ROSTER_SLOTS[number];
 export type SlotAssignment = string | "bench";
@@ -52,10 +34,7 @@ export const SLOT_DISPLAY_LABELS = ROSTER_SLOTS.map((slot, index) => {
 });
 
 export function canPlayerUseRosterSlot(player: Player, slot: RosterSlotDefinition): boolean {
-  if (slot.type === "pitcher") return player.isPitcher;
-  if (player.isPitcher) return false;
-  if (player.positions.includes("C") && !slot.positions.includes("C")) return false;
-  return player.positions.some((position) => slot.positions.includes(position));
+  return canPlayerFillSlot(player, slot.type === "pitcher", slot.positions);
 }
 
 export function buildRosterSlots(

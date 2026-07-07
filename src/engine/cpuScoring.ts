@@ -5,6 +5,13 @@ import { CPU_PROFILE_TEMPLATES, CpuArchetype, CpuProfile, getCpuCloserPlan } fro
 import { isDraftableCloser, isPremiumCloser } from "./playerRoles";
 import { POSITION_SLOTS, ScarcityInfo } from "./positionScarcity";
 import { checkPositionalFit } from "./rosterFit";
+import { getConsensusValue, getMaxSystemValue } from "./playerValue";
+
+// Round-phase selector used throughout CPU scoring: early (≤5), mid (≤15),
+// late (>15). Centralizes the phase boundaries that were repeated inline.
+function byPhase<T>(round: number, early: T, mid: T, late: T): T {
+  return round <= 5 ? early : round <= 15 ? mid : late;
+}
 
 export interface CpuScoreDetails {
   score: number;
@@ -101,7 +108,7 @@ export function calculateCpuScore(
 
   // 1. Base Player Value
   const adpDollars = calculateAdpValue(player.adp);
-  const consensusDollars = player.consensusValue !== undefined ? player.consensusValue : player.value;
+  const consensusDollars = getConsensusValue(player);
 
   let adpWeight = 0.65;
   let consensusWeight = 0.35;
@@ -184,14 +191,14 @@ export function calculateCpuScore(
   }
 
   const needMultiplier = (cpuArchetype === "need" ? 1.25 : 1.0) * profile.rosterNeed;
-  const maxRosterNeed = (currentRound <= 5 ? 0.75 : currentRound <= 15 ? 2.00 : 3.00) * needMultiplier;
+  const maxRosterNeed = byPhase(currentRound, 0.75, 2.0, 3.0) * needMultiplier;
   const rosterNeedBonus = maxRosterNeed * positionNeedScore;
 
   // 3. Category Need Bonus
   const needs = calculateCategoryNeeds(cpuRoster, numRounds);
   const rawStatsAdjustment = calculateStatsAdjustment(player, needs);
   const catNeedMultiplier = (cpuArchetype === "need" ? 1.25 : 1.0) * profile.categoryNeed;
-  const maxCatBonus = (currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.50 : 2.50) * catNeedMultiplier;
+  const maxCatBonus = byPhase(currentRound, 0.5, 1.5, 2.5) * catNeedMultiplier;
   const normalizedAdjustment = Math.max(0.0, Math.min(1.0, rawStatsAdjustment / 4.0));
   let categoryNeedBonus = maxCatBonus * normalizedAdjustment;
 
@@ -228,7 +235,7 @@ export function calculateCpuScore(
     const slots = pos === "RP" ? closerPlan.target : POSITION_SLOTS[pos] || 1;
     const teamNeed = Math.max(0, 1.0 - (countOnRoster / slots));
 
-    const maxRunBonus = (currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.25 : 1.00) * profile.runReaction;
+    const maxRunBonus = byPhase(currentRound, 0.5, 1.25, 1.0) * profile.runReaction;
     const bonusVal = runIntensity * teamNeed * maxRunBonus;
     if (bonusVal > positionRunBonus) {
       positionRunBonus = bonusVal;
@@ -246,7 +253,7 @@ export function calculateCpuScore(
     }
   });
 
-  const maxScarcityLimit = (currentRound <= 5 ? 0.75 : currentRound <= 15 ? 1.50 : 1.50) * profile.scarcity;
+  const maxScarcityLimit = byPhase(currentRound, 0.75, 1.5, 1.5) * profile.scarcity;
   const scarcityBonus = Math.min(maxScarcityLimit, maxPositionScarcity * (maxScarcityLimit / 2.00));
 
   // 6. Role / Playing Time Security Bonus
@@ -273,24 +280,22 @@ export function calculateCpuScore(
     }
   }
 
-  const maxRoleBonus = currentRound <= 5 ? 0.75 : currentRound <= 15 ? 1.00 : 2.00;
+  const maxRoleBonus = byPhase(currentRound, 0.75, 1.0, 2.0);
   const roleSecurityBonus = roleScore * maxRoleBonus;
 
   // 7. Upside Bonus
-  const maxSystemValue = player.maxSystemValue !== undefined ? player.maxSystemValue : player.value;
-  const consensusValue = player.consensusValue !== undefined ? player.consensusValue : player.value;
-  const upsideGap = Math.max(0, maxSystemValue - consensusValue);
+  const upsideGap = Math.max(0, getMaxSystemValue(player) - getConsensusValue(player));
   const adpVariance = Math.max(0, player.maxPick - player.adp);
   const adpVarianceScore = Math.min(1.0, adpVariance / 30.0);
   const upsideScore = Math.max(Math.min(1.0, upsideGap / 5.0), adpVarianceScore * 0.5);
 
   const upsideMultiplier = (cpuArchetype === "upside" ? 1.40 : 1.0) * profile.upside;
-  const phaseUpsideWeight = (currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.25 : 2.50) * upsideMultiplier;
+  const phaseUpsideWeight = byPhase(currentRound, 0.5, 1.25, 2.5) * upsideMultiplier;
   const upsideBonus = phaseUpsideWeight * upsideScore;
 
   // 8. Random Noise
-  let randStdDev = currentRound <= 5 ? 0.50 : currentRound <= 15 ? 1.00 : 1.75;
-  let randClamp = currentRound <= 5 ? 1.00 : currentRound <= 15 ? 1.75 : 3.00;
+  let randStdDev = byPhase(currentRound, 0.5, 1.0, 1.75);
+  let randClamp = byPhase(currentRound, 1.0, 1.75, 3.0);
 
   if (cpuArchetype === "market") {
     randStdDev *= 0.5;
