@@ -105,52 +105,11 @@ export default function DraftPickSequence({
   canEditPicks,
   onEditPick,
 }: DraftPickSequenceProps) {
-  const recentStart = Math.max(0, currentPickIndex - 5);
-  const recentPicks = picks.slice(recentStart, currentPickIndex);
+  const pastPicks = picks.slice(0, currentPickIndex).reverse();
   const currentPick = picks[currentPickIndex];
-  const upcomingPicks = picks.slice(currentPickIndex + 1, currentPickIndex + 8);
-  const nextUserPick = picks
-    .slice(currentPickIndex + 1)
-    .find((pick) => pick.teamIndex === userTeamIndex);
-  const picksUntilUser = nextUserPick ? nextUserPick.overallPick - currentPickIndex - 1 : -1;
-  let nextUserPickLabel = "No more turns";
-  if (nextUserPick) {
-    nextUserPickLabel = picksUntilUser === 0
-      ? "You are up"
-      : `${picksUntilUser} until you (#${nextUserPick.overallPick})`;
-  }
 
   return (
     <div className={styles.trackerLayout}>
-      <section className={styles.trackerSection}>
-        <div className={styles.sectionHeader}>
-          <span>Recent Picks</span>
-          <small>{recentPicks.length > 0 ? `Last ${recentPicks.length}` : "None yet"}</small>
-        </div>
-        <div className={styles.pickStack}>
-          {recentPicks.length > 0 ? (
-            recentPicks.map((pick) => {
-              const index = pick.overallPick - 1;
-              return (
-                <PickRow
-                  key={pick.overallPick}
-                  canEditPicks={canEditPicks}
-                  index={index}
-                  isLiveDraftMode={isLiveDraftMode}
-                  isUser={pick.teamIndex === userTeamIndex}
-                  pick={pick}
-                  playerMap={playerMap}
-                  teamName={teamNames[pick.teamIndex]}
-                  onEditPick={onEditPick}
-                />
-              );
-            })
-          ) : (
-            <EmptySection label="Drafted players will appear here." />
-          )}
-        </div>
-      </section>
-
       <section className={styles.trackerSection}>
         <div className={styles.sectionHeader}>
           <span>On Clock</span>
@@ -175,12 +134,12 @@ export default function DraftPickSequence({
 
       <section className={styles.trackerSection}>
         <div className={styles.sectionHeader}>
-          <span>Upcoming</span>
-          <small>{nextUserPickLabel}</small>
+          <span>Past Picks</span>
+          <small>{pastPicks.length > 0 ? `${pastPicks.length} drafted` : "None yet"}</small>
         </div>
-        <div className={styles.pickStack}>
-          {upcomingPicks.length > 0 ? (
-            upcomingPicks.map((pick) => {
+        <div className={`${styles.pickStack} ${styles.pastPickStack}`}>
+          {pastPicks.length > 0 ? (
+            pastPicks.map((pick) => {
               const index = pick.overallPick - 1;
               return (
                 <PickRow
@@ -197,7 +156,7 @@ export default function DraftPickSequence({
               );
             })
           ) : (
-            <EmptySection label="No upcoming picks." />
+            <EmptySection label="Drafted players will appear here." />
           )}
         </div>
       </section>

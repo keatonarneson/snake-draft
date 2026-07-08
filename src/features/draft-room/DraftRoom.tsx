@@ -62,6 +62,89 @@ interface DraftSnapshot {
   projectionOverrides: Record<string, Partial<PlayerStats>>;
 }
 
+interface DraftQueueBarProps {
+  currentPickIndex: number;
+  isDraftComplete: boolean;
+  isDraftStarted: boolean;
+  picks: DraftPick[];
+  teamNames: string[];
+  userTeamIndex: number;
+}
+
+function DraftQueueBar({
+  currentPickIndex,
+  isDraftComplete,
+  isDraftStarted,
+  picks,
+  teamNames,
+  userTeamIndex,
+}: DraftQueueBarProps) {
+  const queuePicks = picks.slice(currentPickIndex, currentPickIndex + 13);
+  const currentPick = picks[currentPickIndex];
+  const nextUserPick = picks
+    .slice(currentPickIndex)
+    .find((pick) => pick.teamIndex === userTeamIndex);
+  const picksUntilUser = nextUserPick ? nextUserPick.overallPick - currentPickIndex - 1 : -1;
+  const userPickLabel = nextUserPick
+    ? picksUntilUser <= 0
+      ? "You are up"
+      : `${picksUntilUser} until you`
+    : "No more turns";
+
+  return (
+    <section className={styles.draftQueueBar} aria-label="Draft queue">
+      <div className={styles.queueSummary}>
+        <span className={styles.queueEyebrow}>Draft Queue</span>
+        <strong>
+          {isDraftComplete
+            ? "Complete"
+            : currentPick
+              ? `${teamNames[currentPick.teamIndex]} on clock`
+              : isDraftStarted
+                ? "In progress"
+                : "Ready"}
+        </strong>
+        <span>{currentPick ? `R${currentPick.round}.${currentPick.pickInRound} - #${currentPick.overallPick}` : userPickLabel}</span>
+      </div>
+
+      <div className={styles.queueScroller}>
+        {queuePicks.length > 0 ? (
+          queuePicks.map((pick, offset) => {
+            const isCurrent = offset === 0 && !isDraftComplete;
+            const isUser = pick.teamIndex === userTeamIndex;
+            const previousPick = queuePicks[offset - 1];
+            const startsRound = Boolean(previousPick && previousPick.round !== pick.round);
+
+            return (
+              <React.Fragment key={pick.overallPick}>
+                {startsRound && (
+                  <div className={styles.queueRoundDivider} aria-label={`Round ${pick.round}`}>
+                    <span>R{pick.round}</span>
+                  </div>
+                )}
+                <div
+                  className={styles.queuePick}
+                  data-current={isCurrent}
+                  data-user={isUser}
+                >
+                  <span className={styles.queuePickState}>{isCurrent ? "On Clock" : "Upcoming"}</span>
+                  <span className={styles.queuePickRound}>R{pick.round}.{pick.pickInRound}</span>
+                  <strong>#{pick.overallPick}</strong>
+                  <span className={styles.queuePickTeam}>{isUser ? "You" : teamNames[pick.teamIndex]}</span>
+                </div>
+              </React.Fragment>
+            );
+          })
+        ) : (
+          <div className={styles.queueEmpty}>Draft complete</div>
+        )}
+      </div>
+
+      <div className={styles.queueUserStatus}>{userPickLabel}</div>
+    </section>
+  );
+}
+
 export default function DraftRoom() {
   // ----------------------------------------------------
   // State
@@ -703,6 +786,15 @@ export default function DraftRoom() {
           </button>
         </div>
       </header>
+
+      <DraftQueueBar
+        currentPickIndex={currentPickIndex}
+        isDraftComplete={isDraftComplete}
+        isDraftStarted={isDraftStarted}
+        picks={picks}
+        teamNames={teamNames}
+        userTeamIndex={userPosition - 1}
+      />
 
       {canRestore && (
         <div className={`${styles.banner} ${styles.bannerInfo}`} role="status">

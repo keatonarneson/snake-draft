@@ -360,6 +360,192 @@
   line-height: 1.1;
 }
 
+.draftQueueBar {
+  display: grid;
+  grid-template-columns: minmax(190px, 250px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  margin-top: -8px;
+  padding: 10px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: rgba(13, 19, 33, 0.78);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(12px);
+}
+
+.queueSummary {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.queueEyebrow {
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.queueSummary strong {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 0.86rem;
+  font-weight: 900;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queueSummary span:last-child {
+  color: var(--secondary);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.queueScroller {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scroll-snap-type: x proximity;
+}
+
+.queueScroller::-webkit-scrollbar {
+  height: 6px;
+}
+
+.queueScroller::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.queuePick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 2px;
+  flex: 0 0 132px;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  scroll-snap-align: start;
+}
+
+.queueRoundDivider {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 0 2px;
+  color: var(--text-muted);
+  scroll-snap-align: start;
+}
+
+.queueRoundDivider::before {
+  content: "";
+  width: 1px;
+  height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.24), transparent);
+}
+
+.queueRoundDivider span {
+  margin-left: 6px;
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.queuePick[data-current="true"] {
+  border-color: rgba(99, 102, 241, 0.55);
+  background: rgba(99, 102, 241, 0.14);
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.14);
+}
+
+.queuePick[data-user="true"] {
+  border-color: rgba(6, 182, 212, 0.48);
+  background: rgba(6, 182, 212, 0.09);
+}
+
+.queuePickState {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.queuePickRound {
+  justify-self: end;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+.queuePick strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.queuePickTeam {
+  min-width: 0;
+  justify-self: end;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queueUserStatus,
+.queueEmpty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid rgba(6, 182, 212, 0.26);
+  border-radius: 999px;
+  background: rgba(6, 182, 212, 0.1);
+  color: #67e8f9;
+  font-size: 0.68rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.queueEmpty {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-muted);
+}
+
 /* Main Dashboard Grid */
 .dashboardGrid {
   display: grid;
@@ -424,6 +610,30 @@
 
   .compactStatus {
     min-width: 170px;
+  }
+
+  .draftQueueBar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    margin-top: -4px;
+  }
+
+  .queueSummary {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 8px;
+  }
+
+  .queueSummary strong {
+    font-size: 0.8rem;
+  }
+
+  .queueUserStatus {
+    display: none;
+  }
+
+  .queuePick {
+    flex-basis: 124px;
   }
 
   .dashboardGrid {
@@ -491,4 +701,3 @@
   gap: 24px;
   min-width: 0;
 }
-

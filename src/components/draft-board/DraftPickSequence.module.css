@@ -42,6 +42,21 @@
   gap: 6px;
 }
 
+.pastPickStack {
+  max-height: clamp(220px, 38vh, 420px);
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.pastPickStack::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pastPickStack::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .pickRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
