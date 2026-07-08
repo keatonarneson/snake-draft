@@ -179,6 +179,7 @@ export default function DraftRoom() {
   const [cpuProfiles, setCpuProfiles] = useState<CpuProfile[]>([]);
   const [projectionOverrides, setProjectionOverrides] = useState<Record<string, Partial<PlayerStats>>>({});
   const [activeCenterView, setActiveCenterView] = useState<CenterView>("draft");
+  const [focusedPlayerId, setFocusedPlayerId] = useState<string | null>(null);
   // Settings live in a drawer. Open by default so first load lands on setup.
   const [isSettingsOpen, setIsSettingsOpen] = useState(true);
   
@@ -853,9 +854,12 @@ export default function DraftRoom() {
             <>
               <DashboardSummary
                 displayMode="draft"
+                draftedPlayers={draftedPlayersDetails}
                 recommendations={recommendations}
                 scarcityMap={positionScarcity}
                 onDraftPlayer={recordDraftPlayer}
+                focusedPlayerId={focusedPlayerId}
+                onFocusPlayer={setFocusedPlayerId}
                 isOnClock={isLiveDraftMode ? canRecordPick : isDraftStarted && isUserTurn}
                 draftActionLabel={playerActionLabel}
                 roundTargets={roundTargets}
@@ -880,7 +884,9 @@ export default function DraftRoom() {
                 currentTeamName={isDraftComplete || !isDraftStarted || !currentPick ? "" : teamNames[currentPick.teamIndex]}
                 currentPickIndex={currentPickIndex}
                 currentTeamIndex={isDraftComplete || !isDraftStarted || !currentPick ? undefined : currentPick.teamIndex}
+                focusedPlayerId={focusedPlayerId}
                 numRounds={numRounds}
+                onFocusPlayer={setFocusedPlayerId}
                 isDraftStarted={isDraftStarted}
                 isDraftComplete={isDraftComplete}
                 roundTargets={roundTargets}

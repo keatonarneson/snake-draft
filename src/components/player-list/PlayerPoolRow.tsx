@@ -30,10 +30,12 @@ interface PlayerPoolRowProps {
   isDraftComplete?: boolean;
   isDraftStarted?: boolean;
   isExpanded: boolean;
+  isFocused?: boolean;
   isOnClock: boolean;
   isPlayerTargeted: boolean;
   numRounds?: number;
   onDraftPlayer: (playerId: string) => void;
+  onFocusPlayer?: (playerId: string) => void;
   onToggleTargetPlayer?: (playerId: string) => void;
   picks: DraftPick[];
   player: Player;
@@ -57,10 +59,12 @@ export function PlayerPoolRow({
   isDraftComplete,
   isDraftStarted,
   isExpanded,
+  isFocused = false,
   isOnClock,
   isPlayerTargeted,
   numRounds,
   onDraftPlayer,
+  onFocusPlayer,
   onToggleTargetPlayer,
   picks,
   player,
@@ -88,8 +92,17 @@ export function PlayerPoolRow({
   return (
     <React.Fragment>
       <tr
-        style={{ opacity: isDrafted ? 0.55 : 1, cursor: "pointer" }}
-        onClick={() => toggleExpand(player.id)}
+        data-focused={isFocused}
+        style={{
+          opacity: isDrafted ? 0.55 : 1,
+          cursor: "pointer",
+          outline: isFocused ? "1px solid rgba(6, 182, 212, 0.55)" : undefined,
+          outlineOffset: isFocused ? "-1px" : undefined,
+        }}
+        onClick={() => {
+          onFocusPlayer?.(player.id);
+          toggleExpand(player.id);
+        }}
       >
         <ExpandIconCell isExpanded={isExpanded} />
         <PlayerNameCell isPlayerTargeted={isPlayerTargeted} onToggleTargetPlayer={onToggleTargetPlayer} player={player} />

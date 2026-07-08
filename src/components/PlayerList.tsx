@@ -29,6 +29,8 @@ interface PlayerListProps {
   scarcityMap?: Record<string, ScarcityInfo>;
   cpuSavesStrategies?: string[];
   cpuProfiles?: CpuProfile[];
+  focusedPlayerId?: string | null;
+  onFocusPlayer?: (playerId: string) => void;
 }
 
 export default function PlayerList({
@@ -51,6 +53,8 @@ export default function PlayerList({
   scarcityMap = {},
   cpuSavesStrategies = [],
   cpuProfiles = [],
+  focusedPlayerId,
+  onFocusPlayer,
 }: PlayerListProps) {
   const {
     expandedPlayerId,
@@ -130,11 +134,13 @@ export default function PlayerList({
                 isDraftComplete={isDraftComplete}
                 isDraftStarted={isDraftStarted}
                 isExpanded={expandedPlayerId === player.id}
+                isFocused={focusedPlayerId === player.id}
                 isOnClock={isOnClock}
                 isPlayerTargeted={targetedPlayerIds.has(player.id)}
                 draftActionLabel={draftActionLabel}
                 numRounds={numRounds}
                 onDraftPlayer={onDraftPlayer}
+                onFocusPlayer={onFocusPlayer}
                 onToggleTargetPlayer={onToggleTargetPlayer}
                 picks={picks}
                 player={player}
