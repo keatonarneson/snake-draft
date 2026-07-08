@@ -18,6 +18,10 @@ interface RecommendationCardProps {
   getDecision: (recommendation: Recommendation) => RecommendationDecision;
   currentOverallPick: number;
   onFocusPlayer?: (playerId: string) => void;
+  targetRoundByPlayerId?: Map<string, number>;
+  isOnClock?: boolean;
+  onDraftPlayer?: (playerId: string) => void;
+  draftActionLabel?: string;
 }
 
 const getReturnLevel = (p: number) => {
@@ -38,12 +42,20 @@ export function RecommendationCard({
   getDecision,
   currentOverallPick,
   onFocusPlayer,
+  targetRoundByPlayerId,
+  isOnClock = false,
+  onDraftPlayer,
+  draftActionLabel,
 }: RecommendationCardProps) {
+  const targetCount = targetRoundByPlayerId?.size ?? 0;
+
   const focusedRecommendations = useMemo(() => {
     if (recommendationFocus === "all") return displayRecs;
 
     let eligible = sortedRecommendations;
-    if (recommendationFocus === "hitters") {
+    if (recommendationFocus === "targets") {
+      eligible = eligible.filter((recommendation) => targetRoundByPlayerId?.has(recommendation.player.id));
+    } else if (recommendationFocus === "hitters") {
       eligible = eligible.filter((recommendation) => !recommendation.player.isPitcher);
     } else if (recommendationFocus === "pitchers") {
       eligible = eligible.filter((recommendation) => recommendation.player.isPitcher);
@@ -52,12 +64,21 @@ export function RecommendationCard({
       eligible = eligible.filter((recommendation) => recommendation.player.positions.includes(position));
     }
 
-    return eligible.slice(0, 3);
+    return eligible.slice(0, 6);
   }, [
     recommendationFocus,
     sortedRecommendations,
     displayRecs,
+    targetRoundByPlayerId,
   ]);
+
+  // When a filter is active, surface the best overall player if it isn't
+  // already in the narrowed list, so a clearly superior BPA is never hidden.
+  const bestAvailable = sortedRecommendations[0];
+  const showBestAvailable =
+    recommendationFocus !== "all" &&
+    bestAvailable !== undefined &&
+    !focusedRecommendations.some((rec) => rec.player.id === bestAvailable.player.id);
 
   const getDecisionReason = (recommendation: Recommendation, decision: RecommendationDecision) => {
     const picksAheadOfMarket = Math.round(recommendation.player.adp - currentOverallPick);
@@ -89,6 +110,7 @@ export function RecommendationCard({
     const returnLevel = getReturnLevel(rec.pReturn);
     const decision = getDecision(rec);
     const decisionLabel = decision === "draft" ? "Draft Now" : decision === "consider" ? "Consider" : "Wait";
+    const targetRound = targetRoundByPlayerId?.get(rec.player.id);
 
     return (
       <div
@@ -111,6 +133,11 @@ export function RecommendationCard({
           <div className={styles.recInfo}>
             <div className={styles.recNameRow}>
               <span className={styles.recName}>{rec.player.name}</span>
+              {targetRound !== undefined && (
+                <span className={styles.recTargetBadge} title={`Queued as a Round ${targetRound} target`}>
+                  ★ R{targetRound}
+                </span>
+              )}
               <span className={styles.recDecision} data-decision={decision}>
                 {decisionLabel}
               </span>
@@ -142,6 +169,18 @@ export function RecommendationCard({
             </span>
           </div>
 
+          {onDraftPlayer && (
+            <button
+              type="button"
+              className={`btn ${isOnClock && decision !== "wait" ? "btn-primary" : "btn-secondary"} ${styles.recDraftButton}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDraftPlayer(rec.player.id);
+              }}
+            >
+              {draftActionLabel ?? (decision === "wait" ? "Draft Anyway" : "Draft")}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -171,6 +210,7 @@ export function RecommendationCard({
         <div className={styles.recFocusTabs} aria-label="Recommendation player type">
           {([
             { id: "all", label: "All" },
+            { id: "targets", label: targetCount > 0 ? `Targets (${targetCount})` : "Targets" },
             { id: "hitters", label: "Hitters" },
             { id: "pitchers", label: "Pitchers" },
           ] as const).map((focus) => (
@@ -179,6 +219,7 @@ export function RecommendationCard({
               type="button"
               className={styles.recFocusTab}
               data-active={recommendationFocus === focus.id}
+              disabled={focus.id === "targets" && targetCount === 0}
               onClick={() => setRecommendationFocus(focus.id)}
             >
               {focus.label}
@@ -206,7 +247,7 @@ export function RecommendationCard({
 
       <div className={styles.recFocusSummary}>
         <span>{focusLabel} focus</span>
-        <span>Click a row to inspect and draft from Player Focus.</span>
+        <span>Click a row to inspect it in Player Focus.</span>
       </div>
 
       <div className={styles.recList}>
@@ -218,6 +259,21 @@ export function RecommendationCard({
           </span>
         )}
       </div>
+
+      {showBestAvailable && (
+        <button
+          type="button"
+          className={styles.recBestAvailable}
+          onClick={() => onFocusPlayer?.(bestAvailable.player.id)}
+          title="Best player available overall — click to inspect"
+        >
+          <span className={styles.recBestAvailableLabel}>Best available</span>
+          <span className={styles.recBestAvailableName}>{bestAvailable.player.name}</span>
+          <span className={styles.recBestAvailableSub}>
+            {bestAvailable.player.positions.join("/")} · {bestAvailable.score.toFixed(1)}
+          </span>
+        </button>
+      )}
     </div>
   );
 }

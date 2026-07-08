@@ -81,12 +81,28 @@ export default function DashboardSummary({
     return new Map(draftedPlayers.map((draftedPlayer) => [draftedPlayer.player.id, draftedPlayer]));
   }, [draftedPlayers]);
 
+  // playerId -> earliest round it is queued as a target, so recommendations can
+  // badge queued players and filter to them without re-walking roundTargets.
+  const targetRoundByPlayerId = useMemo(() => {
+    const map = new Map<string, number>();
+    Object.entries(roundTargets).forEach(([round, target]) => {
+      const roundNumber = Number(round);
+      target.playerIds.forEach((playerId) => {
+        const existing = map.get(playerId);
+        if (existing === undefined || roundNumber < existing) {
+          map.set(playerId, roundNumber);
+        }
+      });
+    });
+    return map;
+  }, [roundTargets]);
+
   const displayRecs = useMemo(() => {
     const urgent = sortedRecommendations.filter((recommendation) => recommendation.pReturn < 1.0);
     const urgentIds = new Set(urgent.map((recommendation) => recommendation.player.id));
     const likelyToReturn = sortedRecommendations.filter((recommendation) => !urgentIds.has(recommendation.player.id));
 
-    return [...urgent, ...likelyToReturn].slice(0, 4);
+    return [...urgent, ...likelyToReturn].slice(0, 6);
   }, [sortedRecommendations]);
 
   const currentOverallPick = (currentPickIndex ?? 0) + 1;
@@ -215,24 +231,25 @@ export default function DashboardSummary({
             onDraftPlayer={onDraftPlayer}
           />
 
-          <div className={styles.draftActionGrid}>
-            <TargetQueueCard
-              targetBoardData={targetBoardData}
-              draftedPlayerIds={draftedPlayerIds}
-              onFocusPlayer={onFocusPlayer}
-              onToggleTargetPlayer={onToggleTargetPlayer}
-            />
+          <TargetQueueCard
+            targetBoardData={targetBoardData}
+            draftedPlayerIds={draftedPlayerIds}
+            onFocusPlayer={onFocusPlayer}
+          />
 
-            <RecommendationCard
-              sortedRecommendations={sortedRecommendations}
-              displayRecs={displayRecs}
-              recommendationFocus={recommendationFocus}
-              setRecommendationFocus={setRecommendationFocus}
-              getDecision={getDecision}
-              currentOverallPick={currentOverallPick}
-              onFocusPlayer={onFocusPlayer}
-            />
-          </div>
+          <RecommendationCard
+            sortedRecommendations={sortedRecommendations}
+            displayRecs={displayRecs}
+            recommendationFocus={recommendationFocus}
+            setRecommendationFocus={setRecommendationFocus}
+            getDecision={getDecision}
+            currentOverallPick={currentOverallPick}
+            onFocusPlayer={onFocusPlayer}
+            targetRoundByPlayerId={targetRoundByPlayerId}
+            isOnClock={isOnClock}
+            onDraftPlayer={onDraftPlayer}
+            draftActionLabel={draftActionLabel}
+          />
         </>
       ) : showRecommendationCard && (
           <RecommendationCard
@@ -243,6 +260,7 @@ export default function DashboardSummary({
             getDecision={getDecision}
             currentOverallPick={currentOverallPick}
             onFocusPlayer={onFocusPlayer}
+            targetRoundByPlayerId={targetRoundByPlayerId}
           />
       )}
     </div>

@@ -5,6 +5,7 @@ import styles from "../DashboardSummary.module.css";
 
 type RecommendationFocus =
   | "all"
+  | "targets"
   | "hitters"
   | "pitchers"
   | `position:${string}`

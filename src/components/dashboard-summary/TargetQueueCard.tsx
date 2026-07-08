@@ -7,7 +7,6 @@ import { TargetBoardPick } from "./TargetBoardCard";
 interface TargetQueueCardProps {
   draftedPlayerIds: Set<string>;
   onFocusPlayer?: (playerId: string) => void;
-  onToggleTargetPlayer?: (playerId: string) => void;
   targetBoardData: TargetBoardPick[];
 }
 
@@ -20,15 +19,14 @@ const getSurvivalLevel = (probability: number) => {
 export function TargetQueueCard({
   draftedPlayerIds,
   onFocusPlayer,
-  onToggleTargetPlayer,
   targetBoardData,
 }: TargetQueueCardProps) {
-  const queuePicks = targetBoardData.slice(0, 4);
+  const queuePicks = targetBoardData.slice(0, 6);
 
   return (
     <div className="card glow-panel">
       <div className="cardHeader">
-        <h3 className="cardTitle">
+        <h3 className="cardTitle" style={{ margin: 0 }}>
           <svg
             width="18"
             height="18"
@@ -45,79 +43,76 @@ export function TargetQueueCard({
           </svg>
           Target Queue
         </h3>
+        <span className={styles.targetQueueHint}>Your targets and their odds of reaching each upcoming pick</span>
       </div>
 
       {queuePicks.length === 0 ? (
         <div className={styles.targetQueueEmpty}>No upcoming picks.</div>
       ) : (
-        <div className={styles.targetQueueList}>
+        <div className={styles.targetQueueRail}>
           {queuePicks.map((pick) => {
-            const visiblePlayers = pick.players.slice(0, 4);
-            const extraCount = Math.max(0, pick.players.length - visiblePlayers.length);
-            const hasTargets = visiblePlayers.length > 0 || pick.positionTarget;
+            const liveTargets = pick.players.filter(({ player }) => !draftedPlayerIds.has(player.id));
+            const sortedTargets = [...liveTargets].sort(
+              (a, b) => a.roundSurvivalProb - b.roundSurvivalProb
+            );
+            const hasTargets = sortedTargets.length > 0;
+            // Worst (lowest) survival drives the cell's at-a-glance urgency border.
+            const worst = sortedTargets[0];
 
             return (
-              <div key={pick.round} className={styles.targetQueueRound}>
-                <div className={styles.targetQueueRoundMeta}>
+              <div
+                key={pick.round}
+                className={styles.targetRailCell}
+                data-survival={worst ? getSurvivalLevel(worst.roundSurvivalProb) : undefined}
+                data-empty={!hasTargets}
+              >
+                <div className={styles.targetRailHead}>
                   <strong>R{pick.round}</strong>
-                  <span>Pick #{pick.overallPick}</span>
+                  <span>#{pick.overallPick}</span>
                 </div>
 
-                <div className={styles.targetQueueTargets}>
-                  {pick.positionTarget && (
-                    <span className={styles.targetQueuePosition}>{pick.positionTarget}</span>
-                  )}
+                {hasTargets ? (
+                  <div className={styles.targetRailList}>
+                    {sortedTargets.map(({ player, roundSurvivalProb }) => {
+                      const pct = Math.round(roundSurvivalProb * 100);
+                      const title = `${player.name}: ${pct}% chance to reach Round ${pick.round}${
+                        onFocusPlayer ? " — click to inspect" : ""
+                      }`;
 
-                  {visiblePlayers.map(({ player, roundSurvivalProb }) => {
-                    const isDrafted = draftedPlayerIds.has(player.id);
-
-                    return (
-                      <span
-                        key={player.id}
-                        className={styles.targetQueuePlayer}
-                        data-drafted={isDrafted}
-                        data-survival={getSurvivalLevel(roundSurvivalProb)}
-                        onClick={() => onFocusPlayer?.(player.id)}
-                        role={onFocusPlayer ? "button" : undefined}
-                        tabIndex={onFocusPlayer ? 0 : undefined}
-                        onKeyDown={(event) => {
-                          if (!onFocusPlayer) return;
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            onFocusPlayer(player.id);
-                          }
-                        }}
-                        title={`${Math.round(roundSurvivalProb * 100)}% chance to reach Round ${pick.round}`}
-                      >
-                        <span className={styles.targetQueuePlayerName}>{player.name}</span>
-                        <small>{player.positions.join("/")}</small>
-                        <b>{Math.round(roundSurvivalProb * 100)}%</b>
-                        {onToggleTargetPlayer && (
+                      if (onFocusPlayer) {
+                        return (
                           <button
+                            key={player.id}
                             type="button"
-                            className={styles.targetQueueRemove}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onToggleTargetPlayer(player.id);
-                            }}
-                            aria-label={`Remove ${player.name} from target queue`}
-                            title="Remove target"
+                            className={styles.targetRailPlayer}
+                            data-survival={getSurvivalLevel(roundSurvivalProb)}
+                            onClick={() => onFocusPlayer(player.id)}
+                            title={title}
                           >
-                            x
+                            <span className={styles.targetRailName}>{player.name}</span>
+                            <b>{pct}%</b>
                           </button>
-                        )}
-                      </span>
-                    );
-                  })}
+                        );
+                      }
 
-                  {extraCount > 0 && (
-                    <span className={styles.targetQueueMore}>+{extraCount}</span>
-                  )}
-
-                  {!hasTargets && (
-                    <span className={styles.targetQueuePlaceholder}>No targets yet</span>
-                  )}
-                </div>
+                      return (
+                        <div
+                          key={player.id}
+                          className={styles.targetRailPlayer}
+                          data-survival={getSurvivalLevel(roundSurvivalProb)}
+                          title={title}
+                        >
+                          <span className={styles.targetRailName}>{player.name}</span>
+                          <b>{pct}%</b>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : pick.positionTarget ? (
+                  <span className={styles.targetRailNeed}>Need {pick.positionTarget}</span>
+                ) : (
+                  <span className={styles.targetRailNone}>No targets</span>
+                )}
               </div>
             );
           })}
