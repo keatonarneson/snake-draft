@@ -22,8 +22,10 @@ import {
 import SettingsPanel from "../../components/SettingsPanel";
 import { SandboxSettingsProvider } from "../../components/settings-panel";
 import DraftBoard from "../../components/DraftBoard";
+import { BoardView } from "../../components/draft-board";
 import PlayerList from "../../components/PlayerList";
 import RosterTracker from "../../components/RosterTracker";
+import { LeagueRosterBoard } from "../../components/roster-tracker";
 import DashboardSummary from "../../components/DashboardSummary";
 import StandingsView from "../../components/StandingsView";
 import { useDraftState } from "../../hooks/useDraftState";
@@ -36,8 +38,7 @@ import type { ProjectionSystem } from "../../data/projections";
 
 type CpuProfileMode = "fixed" | "random";
 type DraftMode = "mock" | "live";
-type MobileSection = "setup" | "draft" | "roster";
-type CenterView = "draft" | "plan" | "standings";
+type CenterView = "draft" | "board" | "roster" | "plan" | "standings";
 
 // Bump when the snapshot shape changes so stale saves are discarded on load.
 const SNAPSHOT_VERSION = 1;
@@ -94,8 +95,9 @@ export default function DraftRoom() {
   const [cpuSavesStrategies, setCpuSavesStrategies] = useState<string[]>([]);
   const [cpuProfiles, setCpuProfiles] = useState<CpuProfile[]>([]);
   const [projectionOverrides, setProjectionOverrides] = useState<Record<string, Partial<PlayerStats>>>({});
-  const [activeMobileSection, setActiveMobileSection] = useState<MobileSection>("draft");
   const [activeCenterView, setActiveCenterView] = useState<CenterView>("draft");
+  // Settings live in a drawer. Open by default so first load lands on setup.
+  const [isSettingsOpen, setIsSettingsOpen] = useState(true);
   
   // Track which team's roster is currently selected in the sidebar
   const [rosterViewTeamIndex, setRosterViewTeamIndex] = useState(4); // default to user index (userPosition - 1)
@@ -563,6 +565,19 @@ export default function DraftRoom() {
     savedDraft.version === SNAPSHOT_VERSION &&
     (savedDraft.currentPickIndex > 0 || savedDraft.isDraftStarted);
 
+  // Suppress the drawer while the resume banner is up so it never covers that
+  // decision (the banner and drawer both want the user's attention first).
+  const settingsDrawerOpen = isSettingsOpen && !canRestore;
+
+  useEffect(() => {
+    if (!settingsDrawerOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsSettingsOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [settingsDrawerOpen]);
+
   const handleRestoreDraft = useCallback(() => {
     if (!savedDraft) return;
     setNumTeams(savedDraft.numTeams);
@@ -583,6 +598,7 @@ export default function DraftRoom() {
     setSimSpeed("manual");
     loadDraft(savedDraft.picks, savedDraft.currentPickIndex, savedDraft.isDraftStarted);
     setRestoreDismissed(true);
+    setIsSettingsOpen(false);
   }, [savedDraft, loadDraft, setProjectionSystem, restoreSandbox]);
 
   const handleDiscardSavedDraft = useCallback(() => {
@@ -646,6 +662,8 @@ export default function DraftRoom() {
         <nav className={styles.topWorkspaceTabs} aria-label="Draft workspace views" role="tablist">
           {[
             { id: "draft" as const, label: "Draft Room" },
+            { id: "board" as const, label: "Board" },
+            { id: "roster" as const, label: "Rosters" },
             { id: "plan" as const, label: "Targets" },
             { id: "standings" as const, label: "Standings" },
           ].map((tab) => (
@@ -670,7 +688,14 @@ export default function DraftRoom() {
             <span className={styles.tickerSub}>{headerMeta}</span>
             <span className={styles.statusDot} data-active={isDraftStarted && !isDraftComplete} />
           </div>
-          <button type="button" className={styles.iconButton} aria-label="Settings" onClick={() => setActiveMobileSection("setup")}>
+          <button
+            type="button"
+            className={styles.iconButton}
+            aria-label="Settings"
+            aria-expanded={settingsDrawerOpen}
+            data-active={settingsDrawerOpen}
+            onClick={() => setIsSettingsOpen((open) => !open)}
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -678,26 +703,6 @@ export default function DraftRoom() {
           </button>
         </div>
       </header>
-
-      <nav className={styles.mobileSectionTabs} aria-label="Mobile dashboard sections" role="tablist">
-        {[
-          { id: "setup" as const, label: "Setup" },
-          { id: "draft" as const, label: "Draft" },
-          { id: "roster" as const, label: "Roster" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={styles.mobileSectionTab}
-            data-active={activeMobileSection === tab.id}
-            role="tab"
-            aria-selected={activeMobileSection === tab.id}
-            onClick={() => setActiveMobileSection(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
 
       {canRestore && (
         <div className={`${styles.banner} ${styles.bannerInfo}`} role="status">
@@ -734,35 +739,15 @@ export default function DraftRoom() {
       )}
 
       {/* Grid Layout */}
-      <main className={styles.dashboardGrid}>
-        {/* Left Column: Settings and Draft Queue */}
-        <section className={styles.settingsSidebar} data-mobile-active={activeMobileSection === "setup"}>
-          <SandboxSettingsProvider value={sandboxValue}>
-            <SettingsPanel
-              numTeams={numTeams}
-              userPosition={userPosition}
-              numRounds={numRounds}
-              draftMode={draftMode}
-              simSpeed={simSpeed}
-              cpuProfileMode={cpuProfileMode}
-              isDraftStarted={isDraftStarted}
-              onConfigChange={handleConfigChange}
-              onReset={handleReset}
-              onAutoPick={executeCpuPick}
-              onStartDraft={() => setIsDraftStarted(true)}
-              targets={targets}
-              onTargetsChange={setTargets}
-              projectionSystem={projectionSystem}
-              onProjectionSystemChange={handleProjectionSystemChange}
-            />
-          </SandboxSettingsProvider>
+      <main className={styles.dashboardGrid} data-wide-view={activeCenterView === "board" || activeCenterView === "roster"}>
+        {/* Left Column: Draft Queue / Board (settings now live in the drawer) */}
+        <section className={styles.settingsSidebar}>
           <DraftBoard
             picks={picks}
             currentPickIndex={currentPickIndex}
             teamNames={teamNames}
             userTeamIndex={userPosition - 1}
             players={players}
-            cpuSavesStrategies={cpuSavesStrategies}
             cpuProfiles={cpuProfiles}
             onUndoLastPick={undoLastPick}
             onEditPick={setPickPlayer}
@@ -771,7 +756,7 @@ export default function DraftRoom() {
         </section>
 
         {/* Center Column: Recommendations and Main Player Pool */}
-        <section className={styles.mainSection} data-mobile-active={activeMobileSection === "draft"}>
+        <section className={styles.mainSection}>
           {activeCenterView === "draft" && (
             <>
               <DashboardSummary
@@ -817,6 +802,27 @@ export default function DraftRoom() {
             </>
           )}
 
+          {activeCenterView === "board" && (
+            <BoardView
+              picks={picks}
+              currentPickIndex={currentPickIndex}
+              teamNames={teamNames}
+              userTeamIndex={userPosition - 1}
+              players={players}
+              cpuSavesStrategies={cpuSavesStrategies}
+              cpuProfiles={cpuProfiles}
+            />
+          )}
+
+          {activeCenterView === "roster" && (
+            <LeagueRosterBoard
+              teamNames={teamNames}
+              userTeamIndex={userPosition - 1}
+              draftedPlayers={draftedPlayersDetails}
+              numRounds={numRounds}
+            />
+          )}
+
           {activeCenterView === "plan" && (
             <DashboardSummary
               displayMode="plan"
@@ -851,7 +857,7 @@ export default function DraftRoom() {
         </section>
 
         {/* Right Column: Roster Tracker */}
-        <section className={styles.rosterSidebar} data-mobile-active={activeMobileSection === "roster"}>
+        <section className={styles.rosterSidebar}>
           <RosterTracker
             teamIndex={rosterViewTeamIndex}
             teamNames={teamNames}
@@ -866,6 +872,55 @@ export default function DraftRoom() {
           />
         </section>
       </main>
+
+      {settingsDrawerOpen && (
+        <div className={styles.settingsScrim} onClick={() => setIsSettingsOpen(false)}>
+          <aside
+            className={styles.settingsDrawer}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Draft settings"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.drawerBar}>
+              <span className={styles.drawerTitle}>Settings</span>
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-label="Close settings"
+                onClick={() => setIsSettingsOpen(false)}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+            <SandboxSettingsProvider value={sandboxValue}>
+              <SettingsPanel
+                numTeams={numTeams}
+                userPosition={userPosition}
+                numRounds={numRounds}
+                draftMode={draftMode}
+                simSpeed={simSpeed}
+                cpuProfileMode={cpuProfileMode}
+                isDraftStarted={isDraftStarted}
+                onConfigChange={handleConfigChange}
+                onReset={handleReset}
+                onAutoPick={executeCpuPick}
+                onStartDraft={() => {
+                  setIsDraftStarted(true);
+                  setIsSettingsOpen(false);
+                }}
+                targets={targets}
+                onTargetsChange={setTargets}
+                projectionSystem={projectionSystem}
+                onProjectionSystemChange={handleProjectionSystemChange}
+              />
+            </SandboxSettingsProvider>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }

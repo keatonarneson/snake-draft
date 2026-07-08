@@ -4,13 +4,10 @@ import React, { useState } from "react";
 import { CpuProfile, DraftPick } from "../engine";
 import { Player } from "../types/draft";
 import {
-  BoardGridModal,
   CpuProfilesModal,
-  DraftLogModal,
   DraftPickSequence,
   DraftTrackerHeader,
   EditPickModal,
-  useDraftLogState,
   useEditPickState,
   usePicksUntilUser,
   usePlayerMap,
@@ -22,7 +19,6 @@ interface DraftBoardProps {
   teamNames: string[];
   userTeamIndex: number;
   players: Player[];
-  cpuSavesStrategies?: string[];
   cpuProfiles?: CpuProfile[];
   isLiveDraftMode?: boolean;
   onUndoLastPick?: () => void;
@@ -35,30 +31,14 @@ export default function DraftBoard({
   teamNames,
   userTeamIndex,
   players,
-  cpuSavesStrategies = [],
   cpuProfiles = [],
   isLiveDraftMode = false,
   onUndoLastPick,
   onEditPick,
 }: DraftBoardProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
   const [isProfilesModalOpen, setIsProfilesModalOpen] = useState(false);
 
   const playerMap = usePlayerMap(players);
-
-  const {
-    debugSearchQuery,
-    setDebugSearchQuery,
-    debugFilterType,
-    setDebugFilterType,
-    debugSortKey,
-    expandedPickIndex,
-    setExpandedPickIndex,
-    filteredPicks,
-    setDraftLogSort,
-    getDraftLogSortLabel,
-  } = useDraftLogState({ picks, teamNames, playerMap });
 
   const picksUntilUser = usePicksUntilUser({ picks, currentPickIndex, userTeamIndex });
 
@@ -78,9 +58,7 @@ export default function DraftBoard({
         currentPickIndex={currentPickIndex}
         picksUntilUser={picksUntilUser}
         onUndoLastPick={onUndoLastPick}
-        onOpenBoard={() => setIsModalOpen(true)}
         onOpenProfiles={() => setIsProfilesModalOpen(true)}
-        onOpenDraftLog={() => setIsDebugModalOpen(true)}
         isLiveDraftMode={isLiveDraftMode}
       />
 
@@ -95,36 +73,6 @@ export default function DraftBoard({
         onEditPick={openEditPick}
       />
 
-      <BoardGridModal
-        isOpen={isModalOpen}
-        picks={picks}
-        currentPickIndex={currentPickIndex}
-        teamNames={teamNames}
-        userTeamIndex={userTeamIndex}
-        playerMap={playerMap}
-        picksUntilUser={picksUntilUser}
-        onClose={() => setIsModalOpen(false)}
-      />
-      <DraftLogModal
-        isOpen={isDebugModalOpen}
-        currentPickIndex={currentPickIndex}
-        teamNames={teamNames}
-        userTeamIndex={userTeamIndex}
-        playerMap={playerMap}
-        cpuSavesStrategies={cpuSavesStrategies}
-        cpuProfiles={cpuProfiles}
-        debugSearchQuery={debugSearchQuery}
-        setDebugSearchQuery={setDebugSearchQuery}
-        debugFilterType={debugFilterType}
-        setDebugFilterType={setDebugFilterType}
-        debugSortKey={debugSortKey}
-        expandedPickIndex={expandedPickIndex}
-        setExpandedPickIndex={setExpandedPickIndex}
-        filteredPicks={filteredPicks}
-        setDraftLogSort={setDraftLogSort}
-        getDraftLogSortLabel={getDraftLogSortLabel}
-        onClose={() => setIsDebugModalOpen(false)}
-      />
       <CpuProfilesModal
         isOpen={isProfilesModalOpen}
         teamNames={teamNames}

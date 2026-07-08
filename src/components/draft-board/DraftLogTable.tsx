@@ -3,11 +3,9 @@
 import React, { Dispatch, SetStateAction } from "react";
 import { CpuProfile, DraftPick, getCpuArchetype, getCpuProfile } from "../../engine";
 import { Player } from "../../types/draft";
-import { ModalShell } from "../ui";
 import { DraftLogFilterType, DraftLogSortKey } from "./useDraftLogState";
 
-interface DraftLogModalProps {
-  isOpen: boolean;
+interface DraftLogTableProps {
   currentPickIndex: number;
   teamNames: string[];
   userTeamIndex: number;
@@ -24,11 +22,9 @@ interface DraftLogModalProps {
   filteredPicks: DraftPick[];
   setDraftLogSort: (sortKey: DraftLogSortKey) => void;
   getDraftLogSortLabel: (sortKey: DraftLogSortKey) => string;
-  onClose: () => void;
 }
 
-export default function DraftLogModal({
-  isOpen,
+export default function DraftLogTable({
   currentPickIndex,
   teamNames,
   userTeamIndex,
@@ -45,42 +41,9 @@ export default function DraftLogModal({
   filteredPicks,
   setDraftLogSort,
   getDraftLogSortLabel,
-  onClose,
-}: DraftLogModalProps) {
-  if (!isOpen || typeof document === "undefined") return null;
-
-  const icon = (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--success)"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="8" y1="6" x2="21" y2="6" />
-      <line x1="8" y1="12" x2="21" y2="12" />
-      <line x1="8" y1="18" x2="21" y2="18" />
-      <line x1="3" y1="6" x2="3.01" y2="6" />
-      <line x1="3" y1="12" x2="3.01" y2="12" />
-      <line x1="3" y1="18" x2="3.01" y2="18" />
-    </svg>
-  );
-
+}: DraftLogTableProps) {
   return (
-    <ModalShell
-      isOpen={isOpen}
-      title="Draft Log & CPU Picker Debugger"
-      ariaLabel="Draft log and CPU picker debugger"
-      icon={icon}
-      badge={<span className="badge badge-success" style={{ fontSize: "0.72rem", padding: "4px 8px" }}>Debug View</span>}
-      width="95vw"
-      maxWidth="1200px"
-      height="85vh"
-      onClose={onClose}
-    >
+    <>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.04)" }}>
           <div style={{ display: "flex", gap: "8px", flexGrow: 1, maxWidth: "400px" }}>
             <input
@@ -387,6 +350,6 @@ export default function DraftLogModal({
             </tbody>
           </table>
         </div>
-    </ModalShell>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import styles from "../DashboardSummary.module.css";
 import {
   Recommendation,
@@ -58,6 +58,10 @@ export function RecommendationCard({
   categoryNeedSummary,
   userRosterSize,
 }: RecommendationCardProps) {
+  // Compact by default: show a short strip of top picks so the player pool
+  // below gets the vertical space. Expand for filters, needs, and reasoning.
+  const [expanded, setExpanded] = useState(false);
+
   const focusedRecommendations = useMemo(() => {
     if (recommendationFocus === "all") return displayRecs;
 
@@ -206,10 +210,59 @@ export function RecommendationCard({
     );
   };
 
+  const renderCompactChip = (rec: Recommendation, index: number) => {
+    const decision = getDecision(rec);
+    const decisionLabel = decision === "draft" ? "Draft Now" : decision === "consider" ? "Consider" : "Wait";
+    const returnLevel = getReturnLevel(rec.pReturn);
+
+    return (
+      <div
+        key={rec.player.id}
+        data-decision={decision}
+        style={{
+          flex: "0 0 auto",
+          width: "196px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          padding: "10px 12px",
+          borderRadius: "10px",
+          border: "1px solid var(--glass-border)",
+          background: "var(--bg-card)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--text-muted)" }}>{index + 1}</span>
+          <span style={{ fontSize: "0.85rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
+            {rec.player.name}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-secondary)" }}>
+          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {rec.player.team} | {rec.player.positions.join("/")}
+          </span>
+          <span className={styles.recReturnGlow} data-level={returnLevel} style={{ flex: "0 0 auto" }}>
+            {formatPercent(rec.pReturn)}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+          <span className={styles.recDecision} data-decision={decision}>{decisionLabel}</span>
+          <button
+            className={`btn ${isOnClock && decision !== "wait" ? "btn-primary" : "btn-secondary"}`}
+            style={{ padding: "3px 10px", fontSize: "0.7rem" }}
+            onClick={() => onDraftPlayer(rec.player.id)}
+          >
+            {draftActionLabel ?? "Draft"}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="card glow-panel">
-      <div className="cardHeader">
-        <h3 className="cardTitle">
+      <div className="cardHeader" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+        <h3 className="cardTitle" style={{ margin: 0 }}>
           <svg
             width="18"
             height="18"
@@ -224,8 +277,44 @@ export function RecommendationCard({
           </svg>
           Draft Recommendations
         </h3>
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "4px 10px",
+            borderRadius: "8px",
+            border: "1px solid var(--glass-border)",
+            background: "rgba(255,255,255,0.04)",
+            color: "var(--text-secondary)",
+            fontSize: "0.72rem",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          {expanded ? "Compact" : "Details"}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.15s ease" }}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
       </div>
 
+      {!expanded && (
+        <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }}>
+          {displayRecs.map((rec, index) => renderCompactChip(rec, index))}
+          {displayRecs.length === 0 && (
+            <span style={{ fontSize: "0.82rem", color: "var(--text-muted)", fontStyle: "italic", padding: "8px" }}>
+              No recommendations yet.
+            </span>
+          )}
+        </div>
+      )}
+
+      {expanded && (
+      <>
       <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "-6px" }}>
         Focus on a roster goal without losing draft timing or the best overall alternatives.
       </p>
@@ -322,6 +411,8 @@ export function RecommendationCard({
             {overallAlternatives.map((rec, index) => renderRecommendation(rec, index, true))}
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

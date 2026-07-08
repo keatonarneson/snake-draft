@@ -1,6 +1,5 @@
-export { default as BoardGridModal } from "./BoardGridModal";
+export { default as BoardView } from "./BoardView";
 export { default as CpuProfilesModal } from "./CpuProfilesModal";
-export { default as DraftLogModal } from "./DraftLogModal";
 export { default as DraftPickSequence } from "./DraftPickSequence";
 export { default as DraftTrackerHeader } from "./DraftTrackerHeader";
 export { default as EditPickModal } from "./EditPickModal";

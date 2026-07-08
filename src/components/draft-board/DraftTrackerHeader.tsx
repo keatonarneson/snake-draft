@@ -8,9 +8,7 @@ interface DraftTrackerHeaderProps {
   isLiveDraftMode?: boolean;
   picksUntilUser: number;
   onUndoLastPick?: () => void;
-  onOpenBoard: () => void;
   onOpenProfiles: () => void;
-  onOpenDraftLog: () => void;
 }
 
 export default function DraftTrackerHeader({
@@ -18,9 +16,7 @@ export default function DraftTrackerHeader({
   isLiveDraftMode = false,
   picksUntilUser,
   onUndoLastPick,
-  onOpenBoard,
   onOpenProfiles,
-  onOpenDraftLog,
 }: DraftTrackerHeaderProps) {
   return (
     <div className={`cardHeader ${styles.draftTrackerHeader}`}>
@@ -78,45 +74,6 @@ export default function DraftTrackerHeader({
           Undo
         </button>
 
-        <button
-          className={styles.draftTrackerActionButton}
-          onClick={onOpenBoard}
-          style={{
-            background: "rgba(99, 102, 241, 0.12)",
-            border: "1px solid rgba(99, 102, 241, 0.3)",
-            color: "var(--primary)",
-            padding: "4px 8px",
-            borderRadius: "6px",
-            fontSize: "0.68rem",
-            fontWeight: 700,
-            cursor: "pointer",
-            gap: "4px",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--primary)";
-            e.currentTarget.style.color = "#ffffff";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(99, 102, 241, 0.12)";
-            e.currentTarget.style.color = "var(--primary)";
-          }}
-        >
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
-          </svg>
-          Board
-        </button>
-
         {!isLiveDraftMode && (
           <button
             className={styles.draftTrackerActionButton}
@@ -153,50 +110,6 @@ export default function DraftTrackerHeader({
             CPU Profiles
           </button>
         )}
-
-        <button
-          className={styles.draftTrackerActionButton}
-          onClick={onOpenDraftLog}
-          style={{
-            background: "rgba(16, 185, 129, 0.12)",
-            border: "1px solid rgba(16, 185, 129, 0.3)",
-            color: "var(--success)",
-            padding: "4px 8px",
-            borderRadius: "6px",
-            fontSize: "0.68rem",
-            fontWeight: 700,
-            cursor: "pointer",
-            gap: "4px",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--success)";
-            e.currentTarget.style.color = "#ffffff";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(16, 185, 129, 0.12)";
-            e.currentTarget.style.color = "var(--success)";
-          }}
-        >
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="8" y1="6" x2="21" y2="6" />
-            <line x1="8" y1="12" x2="21" y2="12" />
-            <line x1="8" y1="18" x2="21" y2="18" />
-            <line x1="3" y1="6" x2="3.01" y2="6" />
-            <line x1="3" y1="12" x2="3.01" y2="12" />
-            <line x1="3" y1="18" x2="3.01" y2="18" />
-          </svg>
-          Draft Log
-        </button>
 
         {picksUntilUser !== -1 && (
           <span
