@@ -13,6 +13,7 @@ interface DraftPickSequenceProps {
   playerMap: Map<string, Player>;
   canEditPicks: boolean;
   onEditPick: (pickIndex: number) => void;
+  onFocusPlayer?: (playerId: string) => void;
 }
 
 interface PickRowProps {
@@ -25,6 +26,7 @@ interface PickRowProps {
   playerMap: Map<string, Player>;
   teamName: string;
   onEditPick: (pickIndex: number) => void;
+  onFocusPlayer?: (playerId: string) => void;
 }
 
 function PickRow({
@@ -37,11 +39,18 @@ function PickRow({
   playerMap,
   teamName,
   onEditPick,
+  onFocusPlayer,
 }: PickRowProps) {
   const draftedPlayer = pick.playerDraftedId ? playerMap.get(pick.playerDraftedId) : null;
+  const canFocusPlayer = Boolean(draftedPlayer && onFocusPlayer);
   const canEditCompletedPick = canEditPicks && Boolean(draftedPlayer);
   const canSetLiveCurrentPick = canEditPicks && isCurrent && isLiveDraftMode && !draftedPlayer;
   const actionLabel = canEditCompletedPick ? "Edit" : canSetLiveCurrentPick ? "Set Pick" : null;
+  const focusDraftedPlayer = () => {
+    if (draftedPlayer) {
+      onFocusPlayer?.(draftedPlayer.id);
+    }
+  };
 
   return (
     <div
@@ -49,6 +58,17 @@ function PickRow({
       data-current={isCurrent}
       data-user={isUser}
       data-drafted={Boolean(draftedPlayer)}
+      data-focusable={canFocusPlayer}
+      role={canFocusPlayer ? "button" : undefined}
+      tabIndex={canFocusPlayer ? 0 : undefined}
+      onClick={canFocusPlayer ? focusDraftedPlayer : undefined}
+      onKeyDown={(event) => {
+        if (!canFocusPlayer) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          focusDraftedPlayer();
+        }
+      }}
     >
       <div className={styles.pickMain}>
         <span className={styles.pickNumber}>#{pick.overallPick}</span>
@@ -73,7 +93,10 @@ function PickRow({
           <button
             type="button"
             className={styles.editButton}
-            onClick={() => onEditPick(index)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEditPick(index);
+            }}
             title={draftedPlayer ? "Change this pick" : "Set this pick manually"}
           >
             {actionLabel}
@@ -104,6 +127,7 @@ export default function DraftPickSequence({
   playerMap,
   canEditPicks,
   onEditPick,
+  onFocusPlayer,
 }: DraftPickSequenceProps) {
   const pastPicks = picks.slice(0, currentPickIndex).reverse();
   const currentPick = picks[currentPickIndex];
@@ -126,6 +150,7 @@ export default function DraftPickSequence({
             playerMap={playerMap}
             teamName={teamNames[currentPick.teamIndex]}
             onEditPick={onEditPick}
+            onFocusPlayer={onFocusPlayer}
           />
         ) : (
           <EmptySection label="Draft complete." />
@@ -152,6 +177,7 @@ export default function DraftPickSequence({
                   playerMap={playerMap}
                   teamName={teamNames[pick.teamIndex]}
                   onEditPick={onEditPick}
+                  onFocusPlayer={onFocusPlayer}
                 />
               );
             })

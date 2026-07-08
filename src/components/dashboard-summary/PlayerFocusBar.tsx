@@ -15,8 +15,10 @@ interface DraftedPlayerDetail {
 interface PlayerFocusBarProps {
   draftedDetail?: DraftedPlayerDetail;
   draftActionLabel?: string;
+  isTargeted?: boolean;
   isOnClock: boolean;
   onDraftPlayer: (playerId: string) => void;
+  onToggleTargetPlayer?: (playerId: string) => void;
   player?: Player | null;
   recommendation?: Recommendation;
   targetRound?: number;
@@ -34,7 +36,7 @@ function formatStatValue(value: number | undefined, stat: string) {
 function ProjectedStatsStrip({ player }: { player: Player }) {
   const statKeys = player.isPitcher
     ? ["IP", "W", "SV", "SO", "ERA", "WHIP"]
-    : ["R", "HR", "RBI", "SB", "AVG"];
+    : ["AB", "R", "HR", "RBI", "SB", "AVG"];
 
   return (
     <div className={styles.playerFocusStats} aria-label="Projected stats">
@@ -51,8 +53,10 @@ function ProjectedStatsStrip({ player }: { player: Player }) {
 export function PlayerFocusBar({
   draftedDetail,
   draftActionLabel,
+  isTargeted = false,
   isOnClock,
   onDraftPlayer,
+  onToggleTargetPlayer,
   player,
   recommendation,
   targetRound,
@@ -95,7 +99,23 @@ export function PlayerFocusBar({
     <section className={styles.playerFocusBar} aria-label="Focused player">
       <div className={styles.playerFocusMain}>
         <div className={styles.playerFocusIdentity}>
-          <strong>{player.name}</strong>
+          <div className={styles.playerFocusNameRow}>
+            <strong>{player.name}</strong>
+            {!isDrafted && onToggleTargetPlayer && (
+              <button
+                type="button"
+                className={styles.playerFocusTargetButton}
+                data-active={isTargeted}
+                onClick={() => onToggleTargetPlayer(player.id)}
+                title={isTargeted ? "Remove target" : "Target player"}
+                aria-label={isTargeted ? `Remove ${player.name} from targets` : `Target ${player.name}`}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill={isTargeted ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </button>
+            )}
+          </div>
           <span>{player.team} | {player.positions.join("/")}</span>
         </div>
       </div>

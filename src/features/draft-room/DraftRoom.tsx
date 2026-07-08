@@ -844,6 +844,7 @@ export default function DraftRoom() {
             cpuProfiles={cpuProfiles}
             onUndoLastPick={undoLastPick}
             onEditPick={setPickPlayer}
+            onFocusPlayer={setFocusedPlayerId}
             isLiveDraftMode={isLiveDraftMode}
           />
         </section>

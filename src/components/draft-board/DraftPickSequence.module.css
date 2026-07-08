@@ -85,6 +85,17 @@
   opacity: 0.72;
 }
 
+.pickRow[data-focusable="true"] {
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.pickRow[data-focusable="true"]:hover {
+  border-color: rgba(99, 102, 241, 0.36);
+  background: rgba(99, 102, 241, 0.08);
+  opacity: 1;
+}
+
 .pickMain {
   display: flex;
   align-items: center;

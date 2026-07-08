@@ -23,6 +23,7 @@ interface DraftBoardProps {
   isLiveDraftMode?: boolean;
   onUndoLastPick?: () => void;
   onEditPick?: (pickIndex: number, playerId: string) => void;
+  onFocusPlayer?: (playerId: string) => void;
 }
 
 export default function DraftBoard({
@@ -35,6 +36,7 @@ export default function DraftBoard({
   isLiveDraftMode = false,
   onUndoLastPick,
   onEditPick,
+  onFocusPlayer,
 }: DraftBoardProps) {
   const [isProfilesModalOpen, setIsProfilesModalOpen] = useState(false);
 
@@ -71,6 +73,7 @@ export default function DraftBoard({
         playerMap={playerMap}
         canEditPicks={Boolean(onEditPick)}
         onEditPick={openEditPick}
+        onFocusPlayer={onFocusPlayer}
       />
 
       <CpuProfilesModal

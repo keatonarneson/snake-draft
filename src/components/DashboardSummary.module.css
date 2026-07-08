@@ -7,7 +7,7 @@
 
 .playerFocusBar {
   display: grid;
-  grid-template-columns: minmax(170px, 1fr) minmax(0, 1.15fr) minmax(0, 1.35fr) auto;
+  grid-template-columns: minmax(170px, 0.9fr) minmax(340px, 1.1fr) minmax(300px, 1.05fr) auto;
   align-items: center;
   gap: 12px;
   min-width: 0;
@@ -38,6 +38,13 @@
   min-width: 0;
 }
 
+.playerFocusNameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .playerFocusIdentity strong {
   min-width: 0;
   color: var(--text-primary);
@@ -54,21 +61,43 @@
   font-weight: 800;
 }
 
+.playerFocusTargetButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.playerFocusTargetButton[data-active="true"] {
+  color: var(--warning);
+}
+
+.playerFocusTargetButton:hover {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warning);
+}
+
 .playerFocusMetrics {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
   align-items: center;
   gap: 8px;
   min-width: 0;
-  overflow-x: auto;
-  padding-bottom: 1px;
 }
 
 .playerFocusMetrics span {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  flex: 0 0 auto;
-  min-width: 58px;
+  min-width: 0;
   padding: 5px 8px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 7px;
@@ -96,8 +125,8 @@
 
 .playerFocusStats {
   display: grid;
-  grid-template-columns: repeat(6, minmax(38px, 1fr));
-  gap: 5px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
   min-width: 0;
 }
 
@@ -106,7 +135,7 @@
   flex-direction: column;
   gap: 1px;
   min-width: 0;
-  padding: 5px 6px;
+  padding: 5px;
   border: 1px solid rgba(255, 255, 255, 0.055);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.025);
@@ -114,7 +143,7 @@
 
 .playerFocusStats small {
   color: var(--text-muted);
-  font-size: 0.56rem;
+  font-size: 0.54rem;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -122,7 +151,7 @@
 .playerFocusStats b {
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
 }
 
@@ -460,7 +489,7 @@
 
 .recFocusTabs {
   display: inline-grid;
-  grid-template-columns: repeat(3, minmax(70px, 1fr));
+  grid-template-columns: repeat(4, minmax(92px, 1fr));
   padding: 3px;
   border: 1px solid var(--border-muted);
   border-radius: 7px;
@@ -588,30 +617,20 @@
 }
 
 .targetQueueRail {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(218px, 1fr));
+  align-items: stretch;
+  gap: 12px;
   min-width: 0;
-  overflow-x: auto;
-  padding-bottom: 3px;
-}
-
-.targetQueueRail::-webkit-scrollbar {
-  height: 5px;
-}
-
-.targetQueueRail::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
 }
 
 .targetRailCell {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  flex: 0 0 158px;
+  gap: 8px;
   min-width: 0;
-  padding: 8px 10px;
+  min-height: 98px;
+  padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-left-width: 3px;
   border-radius: 8px;
@@ -660,7 +679,7 @@
 .targetRailList {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   min-width: 0;
   max-height: 150px;
   overflow-y: auto;
@@ -678,34 +697,53 @@
 
 .targetRailPlayer {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 6px;
   min-width: 0;
-  padding: 3px 6px;
+  padding: 6px 8px;
   border: 0;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.03);
   text-align: left;
 }
 
-button.targetRailPlayer {
-  cursor: pointer;
-  transition: background 0.15s ease;
+.targetRailInspect,
+.targetRailInspectStatic {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-button.targetRailPlayer:hover {
+.targetRailInspect {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.targetRailPlayer:has(.targetRailInspect:hover) {
   background: rgba(6, 182, 212, 0.1);
 }
 
 .targetRailName {
   min-width: 0;
   color: var(--text-secondary);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 800;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.targetRailPosition {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  font-weight: 900;
 }
 
 .targetRailPlayer b {
@@ -713,6 +751,25 @@ button.targetRailPlayer:hover {
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 900;
+}
+
+.targetRailRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--warning);
+  cursor: pointer;
+}
+
+.targetRailRemove:hover {
+  background: rgba(245, 158, 11, 0.12);
 }
 
 .targetRailPlayer[data-survival="high"] b {
@@ -751,19 +808,21 @@ button.targetRailPlayer:hover {
 
 .recList {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+  gap: 12px;
 }
 
 .recItem {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 14px;
   background: rgba(99, 102, 241, 0.03);
   border: 1px solid rgba(99, 102, 241, 0.1);
   border-radius: 8px;
   cursor: pointer;
-  padding: 8px 10px;
+  min-height: 92px;
+  padding: 12px 14px;
   transition: all 0.2s;
 }
 
@@ -785,8 +844,8 @@ button.targetRailPlayer:hover {
 
 .recItemLeft {
   display: flex;
-  align-items: center;
-  gap: 9px;
+  align-items: flex-start;
+  gap: 12px;
   min-width: 0;
   flex: 1;
 }
@@ -803,31 +862,36 @@ button.targetRailPlayer:hover {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  margin-top: 2px;
 }
 
 .recInfo {
   display: flex;
   flex-direction: column;
+  gap: 3px;
   min-width: 0;
 }
 
 .recNameRow {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 7px;
   min-width: 0;
 }
 
 .recName {
+  color: var(--text-primary);
   font-weight: 600;
-  font-size: 0.82rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .recSub {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
 }
 
@@ -857,7 +921,8 @@ button.targetRailPlayer:hover {
 
 .recDecisionReason {
   color: var(--text-muted);
-  font-size: 0.64rem;
+  font-size: 0.68rem;
+  line-height: 1.25;
 }
 
 .recTargetBadge {
@@ -930,6 +995,8 @@ button.targetRailPlayer:hover {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 0 0 auto;
+  padding-top: 2px;
 }
 
 .recMetric {
@@ -1012,7 +1079,20 @@ button.targetRailPlayer:hover {
   }
 
   .playerFocusStats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .playerFocusStats span {
+    padding: 4px 3px;
+  }
+
+  .playerFocusStats small {
+    font-size: 0.5rem;
+  }
+
+  .playerFocusStats b {
+    font-size: 0.58rem;
   }
 
   .playerFocusAction {

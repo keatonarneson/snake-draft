@@ -7,6 +7,7 @@ import { TargetBoardPick } from "./TargetBoardCard";
 interface TargetQueueCardProps {
   draftedPlayerIds: Set<string>;
   onFocusPlayer?: (playerId: string) => void;
+  onToggleTargetPlayer?: (playerId: string) => void;
   targetBoardData: TargetBoardPick[];
 }
 
@@ -19,6 +20,7 @@ const getSurvivalLevel = (probability: number) => {
 export function TargetQueueCard({
   draftedPlayerIds,
   onFocusPlayer,
+  onToggleTargetPlayer,
   targetBoardData,
 }: TargetQueueCardProps) {
   const queuePicks = targetBoardData.slice(0, 6);
@@ -56,7 +58,6 @@ export function TargetQueueCard({
               (a, b) => a.roundSurvivalProb - b.roundSurvivalProb
             );
             const hasTargets = sortedTargets.length > 0;
-            // Worst (lowest) survival drives the cell's at-a-glance urgency border.
             const worst = sortedTargets[0];
 
             return (
@@ -75,25 +76,10 @@ export function TargetQueueCard({
                   <div className={styles.targetRailList}>
                     {sortedTargets.map(({ player, roundSurvivalProb }) => {
                       const pct = Math.round(roundSurvivalProb * 100);
+                      const positions = player.positions.join("/");
                       const title = `${player.name}: ${pct}% chance to reach Round ${pick.round}${
-                        onFocusPlayer ? " — click to inspect" : ""
+                        onFocusPlayer ? " - click to inspect" : ""
                       }`;
-
-                      if (onFocusPlayer) {
-                        return (
-                          <button
-                            key={player.id}
-                            type="button"
-                            className={styles.targetRailPlayer}
-                            data-survival={getSurvivalLevel(roundSurvivalProb)}
-                            onClick={() => onFocusPlayer(player.id)}
-                            title={title}
-                          >
-                            <span className={styles.targetRailName}>{player.name}</span>
-                            <b>{pct}%</b>
-                          </button>
-                        );
-                      }
 
                       return (
                         <div
@@ -102,8 +88,35 @@ export function TargetQueueCard({
                           data-survival={getSurvivalLevel(roundSurvivalProb)}
                           title={title}
                         >
-                          <span className={styles.targetRailName}>{player.name}</span>
+                          {onFocusPlayer ? (
+                            <button
+                              type="button"
+                              className={styles.targetRailInspect}
+                              onClick={() => onFocusPlayer(player.id)}
+                            >
+                              <span className={styles.targetRailName}>{player.name}</span>
+                              <span className={styles.targetRailPosition}>{positions}</span>
+                            </button>
+                          ) : (
+                            <span className={styles.targetRailInspectStatic}>
+                              <span className={styles.targetRailName}>{player.name}</span>
+                              <span className={styles.targetRailPosition}>{positions}</span>
+                            </span>
+                          )}
                           <b>{pct}%</b>
+                          {onToggleTargetPlayer && (
+                            <button
+                              type="button"
+                              className={styles.targetRailRemove}
+                              onClick={() => onToggleTargetPlayer(player.id)}
+                              title={`Remove ${player.name} from targets`}
+                              aria-label={`Remove ${player.name} from targets`}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       );
                     })}

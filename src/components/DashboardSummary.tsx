@@ -226,15 +226,18 @@ export default function DashboardSummary({
             recommendation={focusedPlayer ? recommendationMap.get(focusedPlayer.id) : undefined}
             draftedDetail={focusedPlayer ? draftedPlayerMap.get(focusedPlayer.id) : undefined}
             targetRound={focusedTargetRound}
+            isTargeted={focusedTargetRound !== undefined}
             isOnClock={isOnClock}
             draftActionLabel={draftActionLabel}
             onDraftPlayer={onDraftPlayer}
+            onToggleTargetPlayer={onToggleTargetPlayer}
           />
 
           <TargetQueueCard
             targetBoardData={targetBoardData}
             draftedPlayerIds={draftedPlayerIds}
             onFocusPlayer={onFocusPlayer}
+            onToggleTargetPlayer={onToggleTargetPlayer}
           />
 
           <RecommendationCard
