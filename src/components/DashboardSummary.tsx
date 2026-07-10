@@ -34,6 +34,7 @@ interface DashboardSummaryProps {
   onFocusPlayer?: (playerId: string) => void;
   draftActionLabel?: string;
   isOnClock: boolean;
+  isDraftStarted?: boolean;
   roundTargets?: Record<number, { position: string | null; playerIds: string[] }>;
   onSetRoundPositionTarget?: (round: number, position: string | null) => void;
   onMoveTargetPlayer?: (playerId: string, fromRound: number, toRound: number) => void;
@@ -57,6 +58,7 @@ export default function DashboardSummary({
   onFocusPlayer,
   draftActionLabel,
   isOnClock,
+  isDraftStarted = true,
   roundTargets = {},
   onSetRoundPositionTarget,
   onMoveTargetPlayer,
@@ -96,14 +98,6 @@ export default function DashboardSummary({
     });
     return map;
   }, [roundTargets]);
-
-  const displayRecs = useMemo(() => {
-    const urgent = sortedRecommendations.filter((recommendation) => recommendation.pReturn < 1.0);
-    const urgentIds = new Set(urgent.map((recommendation) => recommendation.player.id));
-    const likelyToReturn = sortedRecommendations.filter((recommendation) => !urgentIds.has(recommendation.player.id));
-
-    return [...urgent, ...likelyToReturn].slice(0, 6);
-  }, [sortedRecommendations]);
 
   const currentOverallPick = (currentPickIndex ?? 0) + 1;
   const nextUserPick = userPicks.find((pick) => pick.overallPick > currentOverallPick);
@@ -192,6 +186,8 @@ export default function DashboardSummary({
 
   const showPlanCards = displayMode === "all" || displayMode === "plan";
   const showRecommendationCard = displayMode === "all" || displayMode === "draft";
+  // Both the live and planning workspaces inspect players, so both get the bar.
+  const showFocusBar = displayMode === "draft" || displayMode === "plan";
   const focusedPlayer = focusedPlayerId ? allPlayers.find((player) => player.id === focusedPlayerId) : null;
   const focusedTargetRound = focusedPlayerId
     ? targetBoardData.find((pick) => pick.players.some(({ player }) => player.id === focusedPlayerId))?.round
@@ -199,8 +195,23 @@ export default function DashboardSummary({
 
   return (
     <div className={styles.summaryStack}>
+      {showFocusBar && (
+        <PlayerFocusBar
+          player={focusedPlayer}
+          recommendation={focusedPlayer ? recommendationMap.get(focusedPlayer.id) : undefined}
+          draftedDetail={focusedPlayer ? draftedPlayerMap.get(focusedPlayer.id) : undefined}
+          targetRound={focusedTargetRound}
+          isTargeted={focusedTargetRound !== undefined}
+          isOnClock={isOnClock}
+          draftActionLabel={draftActionLabel}
+          onDraftPlayer={onDraftPlayer}
+          onToggleTargetPlayer={onToggleTargetPlayer}
+        />
+      )}
+
       {showPlanCards && (
         <>
+          {/* The board is the point of this tab, so it leads; pressure is context. */}
           <TargetBoardCard
             targetBoardData={targetBoardData}
             userPicks={userPicks}
@@ -209,6 +220,8 @@ export default function DashboardSummary({
             isOnClock={isOnClock}
             onDraftPlayer={onDraftPlayer}
             draftActionLabel={draftActionLabel}
+            scarcityMap={scarcityMap}
+            onFocusPlayer={onFocusPlayer}
             onSetRoundPositionTarget={onSetRoundPositionTarget}
             onMoveTargetPlayer={onMoveTargetPlayer}
             onToggleTargetPlayer={onToggleTargetPlayer}
@@ -221,34 +234,25 @@ export default function DashboardSummary({
 
       {displayMode === "draft" ? (
         <>
-          <PlayerFocusBar
-            player={focusedPlayer}
-            recommendation={focusedPlayer ? recommendationMap.get(focusedPlayer.id) : undefined}
-            draftedDetail={focusedPlayer ? draftedPlayerMap.get(focusedPlayer.id) : undefined}
-            targetRound={focusedTargetRound}
-            isTargeted={focusedTargetRound !== undefined}
-            isOnClock={isOnClock}
-            draftActionLabel={draftActionLabel}
-            onDraftPlayer={onDraftPlayer}
-            onToggleTargetPlayer={onToggleTargetPlayer}
-          />
-
           <TargetQueueCard
             targetBoardData={targetBoardData}
             draftedPlayerIds={draftedPlayerIds}
+            userPicks={userPicks}
+            currentPickIndex={currentPickIndex}
             onFocusPlayer={onFocusPlayer}
             onToggleTargetPlayer={onToggleTargetPlayer}
+            onMoveTargetPlayer={onMoveTargetPlayer}
           />
 
           <RecommendationCard
             sortedRecommendations={sortedRecommendations}
-            displayRecs={displayRecs}
             recommendationFocus={recommendationFocus}
             setRecommendationFocus={setRecommendationFocus}
             getDecision={getDecision}
             currentOverallPick={currentOverallPick}
             onFocusPlayer={onFocusPlayer}
             targetRoundByPlayerId={targetRoundByPlayerId}
+            isDraftStarted={isDraftStarted}
             isOnClock={isOnClock}
             onDraftPlayer={onDraftPlayer}
             draftActionLabel={draftActionLabel}
@@ -257,13 +261,13 @@ export default function DashboardSummary({
       ) : showRecommendationCard && (
           <RecommendationCard
             sortedRecommendations={sortedRecommendations}
-            displayRecs={displayRecs}
             recommendationFocus={recommendationFocus}
             setRecommendationFocus={setRecommendationFocus}
             getDecision={getDecision}
             currentOverallPick={currentOverallPick}
             onFocusPlayer={onFocusPlayer}
             targetRoundByPlayerId={targetRoundByPlayerId}
+            isDraftStarted={isDraftStarted}
           />
       )}
     </div>

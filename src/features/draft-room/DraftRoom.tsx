@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import styles from "./DraftRoom.module.css";
 import { Player, PlayerStats } from "../../types/draft";
 import {
@@ -29,7 +29,7 @@ import { LeagueRosterBoard } from "../../components/roster-tracker";
 import DashboardSummary from "../../components/DashboardSummary";
 import StandingsView from "../../components/StandingsView";
 import { useDraftState } from "../../hooks/useDraftState";
-import { useDraftTargets } from "../../hooks/useDraftTargets";
+import { useDraftTargets, type RoundTargets } from "../../hooks/useDraftTargets";
 import { useProjectionLoader } from "../../hooks/useProjectionLoader";
 import { usePersistedSnapshot } from "../../hooks/usePersistedSnapshot";
 import { usePlayerMap } from "../../hooks/usePlayerMap";
@@ -56,6 +56,7 @@ interface DraftSnapshot {
   cpuProfileMode: CpuProfileMode;
   projectionSystem: ProjectionSystem;
   targets: LeagueTargets;
+  roundTargets: RoundTargets;
   sandbox: SandboxSnapshot;
   cpuProfiles: CpuProfile[];
   cpuSavesStrategies: string[];
@@ -232,9 +233,17 @@ export default function DraftRoom() {
     draftedPlayerIds,
   });
 
+  // Targets are pinned to this draft's rounds/picks, so wipe them when the
+  // draft's shape changes. A restore also changes the shape but arrives with its
+  // own saved targets — handleRestoreDraft syncs this ref to the restored shape
+  // so this effect sees "no change" and leaves those targets intact.
+  const targetResetKey = `${projectionSystem}|${numTeams}|${numRounds}|${userPosition}`;
+  const targetResetKeyRef = useRef(targetResetKey);
   useEffect(() => {
+    if (targetResetKeyRef.current === targetResetKey) return;
+    targetResetKeyRef.current = targetResetKey;
     setRoundTargets({});
-  }, [projectionSystem, numTeams, numRounds, userPosition, setRoundTargets]);
+  }, [targetResetKey, setRoundTargets]);
 
   // ----------------------------------------------------
   // Initialize or Reset Draft
@@ -610,6 +619,7 @@ export default function DraftRoom() {
     cpuProfileMode,
     projectionSystem,
     targets,
+    roundTargets,
     sandbox: sandboxSnapshot,
     cpuProfiles,
     cpuSavesStrategies,
@@ -625,6 +635,7 @@ export default function DraftRoom() {
     cpuProfileMode,
     projectionSystem,
     targets,
+    roundTargets,
     sandboxSnapshot,
     cpuProfiles,
     cpuSavesStrategies,
@@ -678,12 +689,17 @@ export default function DraftRoom() {
     setCpuSavesStrategies(savedDraft.cpuSavesStrategies);
     setProjectionOverrides(savedDraft.projectionOverrides);
 
+    // Pin the reset key to the restored shape first, so the shape-change effect
+    // won't clear the targets we're about to load (older saves may lack them).
+    targetResetKeyRef.current = `${savedDraft.projectionSystem}|${savedDraft.numTeams}|${savedDraft.numRounds}|${savedDraft.userPosition}`;
+    setRoundTargets(savedDraft.roundTargets ?? {});
+
     // Resume paused so a restored CPU turn doesn't immediately auto-draft.
     setSimSpeed("manual");
     loadDraft(savedDraft.picks, savedDraft.currentPickIndex, savedDraft.isDraftStarted);
     setRestoreDismissed(true);
     setIsSettingsOpen(false);
-  }, [savedDraft, loadDraft, setProjectionSystem, restoreSandbox]);
+  }, [savedDraft, loadDraft, setProjectionSystem, setRoundTargets, restoreSandbox]);
 
   const handleDiscardSavedDraft = useCallback(() => {
     clearSaved();
@@ -862,6 +878,7 @@ export default function DraftRoom() {
                 focusedPlayerId={focusedPlayerId}
                 onFocusPlayer={setFocusedPlayerId}
                 isOnClock={isLiveDraftMode ? canRecordPick : isDraftStarted && isUserTurn}
+                isDraftStarted={isDraftStarted}
                 draftActionLabel={playerActionLabel}
                 roundTargets={roundTargets}
                 onSetRoundPositionTarget={setRoundPositionTarget}
@@ -923,25 +940,54 @@ export default function DraftRoom() {
           )}
 
           {activeCenterView === "plan" && (
-            <DashboardSummary
-              displayMode="plan"
-              recommendations={recommendations}
-              scarcityMap={positionScarcity}
-              onDraftPlayer={recordDraftPlayer}
-              isOnClock={isLiveDraftMode ? canRecordPick : isDraftStarted && isUserTurn}
-              draftActionLabel={playerActionLabel}
-              roundTargets={roundTargets}
-              onSetRoundPositionTarget={setRoundPositionTarget}
-              onMoveTargetPlayer={moveTargetPlayer}
-              onToggleTargetPlayer={toggleTargetPlayer}
-              onAddTargetPlayerToRound={addTargetPlayerToRound}
-              userPicks={userPicks}
-              draftedPlayerIds={draftedPlayerIds}
-              currentPickIndex={currentPickIndex}
-              allPlayers={players}
-              categoryNeeds={userCategoryNeeds}
-              userRosterSize={userDraftedPlayers.length}
-            />
+            <>
+              <DashboardSummary
+                displayMode="plan"
+                draftedPlayers={draftedPlayersDetails}
+                recommendations={recommendations}
+                scarcityMap={positionScarcity}
+                onDraftPlayer={recordDraftPlayer}
+                focusedPlayerId={focusedPlayerId}
+                onFocusPlayer={setFocusedPlayerId}
+                isOnClock={isLiveDraftMode ? canRecordPick : isDraftStarted && isUserTurn}
+                isDraftStarted={isDraftStarted}
+                draftActionLabel={playerActionLabel}
+                roundTargets={roundTargets}
+                onSetRoundPositionTarget={setRoundPositionTarget}
+                onMoveTargetPlayer={moveTargetPlayer}
+                onToggleTargetPlayer={toggleTargetPlayer}
+                onAddTargetPlayerToRound={addTargetPlayerToRound}
+                userPicks={userPicks}
+                draftedPlayerIds={draftedPlayerIds}
+                currentPickIndex={currentPickIndex}
+                allPlayers={players}
+                categoryNeeds={userCategoryNeeds}
+                userRosterSize={userDraftedPlayers.length}
+              />
+              <PlayerList
+                availablePlayers={availablePlayers}
+                draftedPlayers={draftedPlayersDetails}
+                recommendations={recommendations}
+                onDraftPlayer={recordDraftPlayer}
+                isOnClock={isLiveDraftMode ? canRecordPick : isDraftStarted && isUserTurn}
+                draftActionLabel={playerActionLabel}
+                currentTeamName={isDraftComplete || !isDraftStarted || !currentPick ? "" : teamNames[currentPick.teamIndex]}
+                currentPickIndex={currentPickIndex}
+                currentTeamIndex={isDraftComplete || !isDraftStarted || !currentPick ? undefined : currentPick.teamIndex}
+                focusedPlayerId={focusedPlayerId}
+                numRounds={numRounds}
+                onFocusPlayer={setFocusedPlayerId}
+                isDraftStarted={isDraftStarted}
+                isDraftComplete={isDraftComplete}
+                roundTargets={roundTargets}
+                onToggleTargetPlayer={toggleTargetPlayer}
+                picks={picks}
+                userTeamIndex={userPosition - 1}
+                scarcityMap={positionScarcity}
+                cpuSavesStrategies={cpuSavesStrategies}
+                cpuProfiles={cpuProfiles}
+              />
+            </>
           )}
 
           {activeCenterView === "standings" && (

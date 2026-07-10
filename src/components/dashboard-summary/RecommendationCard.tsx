@@ -1,28 +1,45 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import styles from "../DashboardSummary.module.css";
 import {
   Recommendation,
   RecommendationDecision,
 } from "../../engine";
-import { RecommendationFocus } from "./CategoryNeedsStrip";
+
+export type RecommendationFocus =
+  | "all"
+  | "targets"
+  | "hitters"
+  | "pitchers"
+  | `position:${string}`;
 
 const POSITION_FOCUSES = ["C", "1B", "2B", "3B", "SS", "OF", "SP", "RP"];
 
+// Timing tiers drive row order: the pick you should make sits at the top.
+const DECISION_ORDER: Record<RecommendationDecision, number> = {
+  draft: 0,
+  consider: 1,
+  wait: 2,
+};
+
 interface RecommendationCardProps {
   sortedRecommendations: Recommendation[];
-  displayRecs: Recommendation[];
   recommendationFocus: RecommendationFocus;
   setRecommendationFocus: (focus: RecommendationFocus) => void;
   getDecision: (recommendation: Recommendation) => RecommendationDecision;
   currentOverallPick: number;
   onFocusPlayer?: (playerId: string) => void;
   targetRoundByPlayerId?: Map<string, number>;
+  isDraftStarted?: boolean;
   isOnClock?: boolean;
   onDraftPlayer?: (playerId: string) => void;
   draftActionLabel?: string;
 }
+
+// Keep the card short by default; the deeper list is one click away.
+const COLLAPSED_COUNT = 4;
+const EXPANDED_COUNT = 10;
 
 const getReturnLevel = (p: number) => {
   if (p >= 0.70) return "high";
@@ -36,22 +53,24 @@ const formatPercent = (p: number) => {
 
 export function RecommendationCard({
   sortedRecommendations,
-  displayRecs,
   recommendationFocus,
   setRecommendationFocus,
   getDecision,
   currentOverallPick,
   onFocusPlayer,
   targetRoundByPlayerId,
+  isDraftStarted = true,
   isOnClock = false,
   onDraftPlayer,
   draftActionLabel,
 }: RecommendationCardProps) {
   const targetCount = targetRoundByPlayerId?.size ?? 0;
+  // Before the draft starts, timing (return %, draft/consider/wait) is undefined,
+  // so the card degrades to a plain value ranking instead of asserting nonsense.
+  const preDraft = !isDraftStarted;
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const focusedRecommendations = useMemo(() => {
-    if (recommendationFocus === "all") return displayRecs;
-
     let eligible = sortedRecommendations;
     if (recommendationFocus === "targets") {
       eligible = eligible.filter((recommendation) => targetRoundByPlayerId?.has(recommendation.player.id));
@@ -64,13 +83,28 @@ export function RecommendationCard({
       eligible = eligible.filter((recommendation) => recommendation.player.positions.includes(position));
     }
 
-    return eligible.slice(0, 6);
+    // Pre-draft: score order only. Live: order by timing tier, then score, so a
+    // "Draft Now" always outranks a "Wait" regardless of raw score.
+    const ordered = preDraft
+      ? [...eligible].sort((a, b) => b.score - a.score)
+      : [...eligible].sort((a, b) => {
+          const tierGap = DECISION_ORDER[getDecision(a)] - DECISION_ORDER[getDecision(b)];
+          return tierGap !== 0 ? tierGap : b.score - a.score;
+        });
+
+    return ordered.slice(0, EXPANDED_COUNT);
   }, [
     recommendationFocus,
     sortedRecommendations,
-    displayRecs,
     targetRoundByPlayerId,
+    preDraft,
+    getDecision,
   ]);
+
+  const visibleRecommendations = isExpanded
+    ? focusedRecommendations
+    : focusedRecommendations.slice(0, COLLAPSED_COUNT);
+  const hiddenCount = focusedRecommendations.length - visibleRecommendations.length;
 
   // When a filter is active, surface the best overall player if it isn't
   // already in the narrowed list, so a clearly superior BPA is never hidden.
@@ -78,7 +112,7 @@ export function RecommendationCard({
   const showBestAvailable =
     recommendationFocus !== "all" &&
     bestAvailable !== undefined &&
-    !focusedRecommendations.some((rec) => rec.player.id === bestAvailable.player.id);
+    !visibleRecommendations.some((rec) => rec.player.id === bestAvailable.player.id);
 
   const getDecisionReason = (recommendation: Recommendation, decision: RecommendationDecision) => {
     const picksAheadOfMarket = Math.round(recommendation.player.adp - currentOverallPick);
@@ -106,11 +140,66 @@ export function RecommendationCard({
         ? "Overall"
         : recommendationFocus[0].toUpperCase() + recommendationFocus.slice(1);
 
-  const renderRecommendation = (rec: Recommendation, index: number) => {
-    const returnLevel = getReturnLevel(rec.pReturn);
-    const decision = getDecision(rec);
-    const decisionLabel = decision === "draft" ? "Draft Now" : decision === "consider" ? "Consider" : "Wait";
+  const renderName = (rec: Recommendation) =>
+    onFocusPlayer ? (
+      <button
+        type="button"
+        className={`${styles.recName} ${styles.recNameButton}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          onFocusPlayer(rec.player.id);
+        }}
+        title={`Inspect ${rec.player.name} in Player Focus`}
+      >
+        {rec.player.name}
+      </button>
+    ) : (
+      <span className={styles.recName}>{rec.player.name}</span>
+    );
+
+  const renderRecommendation = (rec: Recommendation) => {
     const targetRound = targetRoundByPlayerId?.get(rec.player.id);
+
+    // Pre-draft: value-ranking row — no timing badges, reasons, or draft action.
+    if (preDraft) {
+      return (
+        <div
+          key={rec.player.id}
+          className={styles.recItem}
+          onClick={() => onFocusPlayer?.(rec.player.id)}
+        >
+          <div className={styles.recItemLeft}>
+            <div className={styles.recInfo}>
+              <div className={styles.recNameRow}>
+                {renderName(rec)}
+                {targetRound !== undefined && (
+                  <span className={styles.recTargetBadge} title={`Queued as a Round ${targetRound} target`}>
+                    ★ R{targetRound}
+                  </span>
+                )}
+              </div>
+              <span className={styles.recSub}>
+                {rec.player.team} | {rec.player.positions.join("/")} | ADP {rec.player.adp.toFixed(0)}
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.recItemRight}>
+            <div className={styles.recMetric}>
+              <span className={styles.recMetricLabel}>Value</span>
+              <span className={styles.recMetricVal} style={{ color: "var(--primary)" }}>
+                {rec.score.toFixed(1)}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const decision = getDecision(rec);
+    // Low return argues *for* drafting a "draft" pick, so don't flag it red there.
+    const returnLevel = decision === "draft" ? "neutral" : getReturnLevel(rec.pReturn);
+    const decisionLabel = decision === "draft" ? "Draft Now" : decision === "consider" ? "Consider" : "Wait";
 
     return (
       <div
@@ -118,21 +207,11 @@ export function RecommendationCard({
         className={styles.recItem}
         data-decision={decision}
         onClick={() => onFocusPlayer?.(rec.player.id)}
-        role={onFocusPlayer ? "button" : undefined}
-        tabIndex={onFocusPlayer ? 0 : undefined}
-        onKeyDown={(event) => {
-          if (!onFocusPlayer) return;
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onFocusPlayer(rec.player.id);
-          }
-        }}
       >
         <div className={styles.recItemLeft}>
-          <span className={styles.recRank}>{index + 1}</span>
           <div className={styles.recInfo}>
             <div className={styles.recNameRow}>
-              <span className={styles.recName}>{rec.player.name}</span>
+              {renderName(rec)}
               {targetRound !== undefined && (
                 <span className={styles.recTargetBadge} title={`Queued as a Round ${targetRound} target`}>
                   ★ R{targetRound}
@@ -144,16 +223,19 @@ export function RecommendationCard({
             </div>
             <span className={styles.recSub}>
               {rec.player.team} | {rec.player.positions.join("/")} | ADP {rec.player.adp.toFixed(0)}
-            </span>
-            <span className={styles.recDecisionReason}>
-              {getDecisionReason(rec, decision)}
+              <span className={styles.recDecisionReason}> — {getDecisionReason(rec, decision)}</span>
             </span>
           </div>
         </div>
 
         <div className={styles.recItemRight}>
           <div className={styles.recMetric}>
-            <span className={styles.recMetricLabel}>Return</span>
+            <span
+              className={styles.recMetricLabel}
+              title="Chance this player is still available at your next pick"
+            >
+              Return
+            </span>
             <span
               className={`${styles.recReturnGlow} ${styles.recMetricVal}`}
               data-level={returnLevel}
@@ -169,10 +251,10 @@ export function RecommendationCard({
             </span>
           </div>
 
-          {onDraftPlayer && (
+          {onDraftPlayer && isOnClock && (
             <button
               type="button"
-              className={`btn ${isOnClock && decision !== "wait" ? "btn-primary" : "btn-secondary"} ${styles.recDraftButton}`}
+              className={`btn ${decision !== "wait" ? "btn-primary" : "btn-secondary"} ${styles.recDraftButton}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onDraftPlayer(rec.player.id);
@@ -247,11 +329,15 @@ export function RecommendationCard({
 
       <div className={styles.recFocusSummary}>
         <span>{focusLabel} focus</span>
-        <span>Click a row to inspect it in Player Focus.</span>
+        <span>
+          {preDraft
+            ? "Draft not started — showing value ranking."
+            : "Ordered by draft timing. Click a name to inspect in Player Focus."}
+        </span>
       </div>
 
       <div className={styles.recList}>
-        {focusedRecommendations.map((rec, index) => renderRecommendation(rec, index))}
+        {visibleRecommendations.map((rec) => renderRecommendation(rec))}
 
         {focusedRecommendations.length === 0 && (
           <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "12px" }}>
@@ -259,6 +345,16 @@ export function RecommendationCard({
           </span>
         )}
       </div>
+
+      {(hiddenCount > 0 || isExpanded) && (
+        <button
+          type="button"
+          className={styles.recShowMore}
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+        >
+          {isExpanded ? "Show fewer" : `Show ${hiddenCount} more`}
+        </button>
+      )}
 
       {showBestAvailable && (
         <button

@@ -175,6 +175,73 @@ export function PlayerFocusBar({
           </button>
         )}
       </div>
+
+      {recommendation && !isDrafted && (
+        <ScoreBreakdown player={player} recommendation={recommendation} />
+      )}
     </section>
+  );
+}
+
+// Reconstructs the additive score terms from the stored recommendation fields so
+// the strip reconciles to `score`: Base + Scarcity + Stats + Upside + Reach +
+// Urgency = baseScore, then × Bench discount when the player would ride the bench.
+// (Mirrors the sum in engine/recommendations.ts getRecommendations.)
+function ScoreBreakdown({ player, recommendation }: { player: Player; recommendation: Recommendation }) {
+  const { weights } = recommendation;
+  const urgencyWeight = weights.draftUrgency ?? 1;
+  const projectionWeight = weights.trustProjections ?? 1;
+
+  const baseValue = player.value * projectionWeight;
+  const scarcityPremium = recommendation.scarcityDropOff * weights.scarcity * urgencyWeight;
+  const urgencyBonus = (1 - recommendation.pReturn) * Math.max(0, player.value) * 0.35 * urgencyWeight;
+
+  const addends = [
+    { label: "Scarcity", value: scarcityPremium },
+    { label: "Stats", value: recommendation.statsAdjustment },
+    { label: "Upside", value: recommendation.upsideBonus },
+    { label: "Reach", value: recommendation.reachPenalty },
+    { label: "Urgency", value: urgencyBonus },
+  ];
+
+  const baseScore = baseValue + addends.reduce((sum, term) => sum + term.value, 0);
+  const benchMultiplier = recommendation.isBench
+    ? baseScore > 0
+      ? weights.benchDiscount
+      : 2 - weights.benchDiscount
+    : null;
+
+  return (
+    <div className={styles.playerFocusBreakdown} aria-label="Why this score">
+      <small className={styles.playerFocusBreakdownLabel}>
+        {recommendation.phase.toUpperCase()} · why this score
+      </small>
+
+      <span>
+        <small>Base</small>
+        <b>${baseValue.toFixed(1)}</b>
+      </span>
+
+      {addends.map((term) => (
+        <span key={term.label}>
+          <i>{term.value < 0 ? "−" : "+"}</i>
+          <small>{term.label}</small>
+          <b>${Math.abs(term.value).toFixed(1)}</b>
+        </span>
+      ))}
+
+      {benchMultiplier !== null && (
+        <span>
+          <i>×</i>
+          <small>Bench</small>
+          <b>{benchMultiplier.toFixed(2)}</b>
+        </span>
+      )}
+
+      <span className={styles.playerFocusBreakdownTotal}>
+        <i>=</i>
+        <b>{recommendation.score.toFixed(1)}</b>
+      </span>
+    </div>
   );
 }
