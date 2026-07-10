@@ -9,6 +9,13 @@ interface DraftTrackerHeaderProps {
   picksUntilUser: number;
   onUndoLastPick?: () => void;
   onOpenProfiles: () => void;
+  isDraftStarted: boolean;
+  isDraftComplete: boolean;
+  isSimulationPaused: boolean;
+  canPauseSimulation: boolean;
+  canStepCpu: boolean;
+  onToggleSimulationPause?: () => void;
+  onStepCpu?: () => void;
 }
 
 export default function DraftTrackerHeader({
@@ -17,7 +24,15 @@ export default function DraftTrackerHeader({
   picksUntilUser,
   onUndoLastPick,
   onOpenProfiles,
+  isDraftStarted,
+  isDraftComplete,
+  isSimulationPaused,
+  canPauseSimulation,
+  canStepCpu,
+  onToggleSimulationPause,
+  onStepCpu,
 }: DraftTrackerHeaderProps) {
+  const simulationControlsDisabled = !isDraftStarted || isDraftComplete;
   return (
     <div className={`cardHeader ${styles.draftTrackerHeader}`}>
       <h3 className="cardTitle" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
@@ -74,6 +89,37 @@ export default function DraftTrackerHeader({
           Undo
         </button>
 
+        {!isLiveDraftMode && canPauseSimulation && (
+          <button
+            type="button"
+            className={`${styles.draftTrackerActionButton} ${styles.simulationButton}`}
+            onClick={onToggleSimulationPause}
+            disabled={simulationControlsDisabled || !onToggleSimulationPause}
+            data-active={isSimulationPaused}
+            title={isSimulationPaused ? "Resume automatic CPU drafting" : "Pause automatic CPU drafting"}
+          >
+            {isSimulationPaused ? (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m8 5 11 7-11 7V5Z" /></svg>
+            ) : (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
+            )}
+            {isSimulationPaused ? "Resume" : "Pause"}
+          </button>
+        )}
+
+        {!isLiveDraftMode && (
+          <button
+            type="button"
+            className={`${styles.draftTrackerActionButton} ${styles.stepButton}`}
+            onClick={onStepCpu}
+            disabled={simulationControlsDisabled || !canStepCpu || !onStepCpu}
+            title={canStepCpu ? "Make one CPU pick and remain paused" : "Step is available when a CPU team is on the clock"}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m5 5 10 7-10 7V5Zm11 0h3v14h-3V5Z" /></svg>
+            Step
+          </button>
+        )}
+
         {!isLiveDraftMode && (
           <button
             className={styles.draftTrackerActionButton}
@@ -107,7 +153,7 @@ export default function DraftTrackerHeader({
               <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
-            CPU Profiles
+            Profiles
           </button>
         )}
 

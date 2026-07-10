@@ -20,6 +20,7 @@ interface PickRowProps {
   canEditPicks: boolean;
   index: number;
   isCurrent?: boolean;
+  isLatest?: boolean;
   isLiveDraftMode?: boolean;
   isUser: boolean;
   pick: DraftPick;
@@ -33,6 +34,7 @@ function PickRow({
   canEditPicks,
   index,
   isCurrent = false,
+  isLatest = false,
   isLiveDraftMode = false,
   isUser,
   pick,
@@ -56,6 +58,7 @@ function PickRow({
     <div
       className={styles.pickRow}
       data-current={isCurrent}
+      data-latest={isLatest}
       data-user={isUser}
       data-drafted={Boolean(draftedPlayer)}
       data-focusable={canFocusPlayer}
@@ -71,17 +74,23 @@ function PickRow({
       }}
     >
       <div className={styles.pickMain}>
-        <span className={styles.pickNumber}>#{pick.overallPick}</span>
+        <div className={styles.pickIdentity}>
+          <span className={styles.pickNumber}>#{pick.overallPick}</span>
+          <span className={styles.roundLabel}>R{pick.round}.{pick.pickInRound}</span>
+        </div>
         <div className={styles.pickInfo}>
           <div className={styles.pickMeta}>
-            <span>R{pick.round}.{pick.pickInRound}</span>
             <span>{teamName}</span>
+            {isUser && draftedPlayer && <span className={styles.userLabel}>You</span>}
+            {draftedPlayer && <span className={styles.adpLabel}>ADP {Math.round(draftedPlayer.adp)}</span>}
           </div>
           {draftedPlayer ? (
-            <span className={styles.playerName}>
-              {draftedPlayer.name}
-              <span className={styles.playerPositions}> {draftedPlayer.positions.join("/")}</span>
-            </span>
+            <div className={styles.playerLine}>
+              <span className={styles.positionChip} data-position={draftedPlayer.positions[0] || "UT"}>
+                {draftedPlayer.positions[0] || "UT"}
+              </span>
+              <span className={styles.playerName}>{draftedPlayer.name}</span>
+            </div>
           ) : (
             <span className={styles.emptyPick}>{isCurrent ? "On the clock" : "Queued"}</span>
           )}
@@ -102,11 +111,7 @@ function PickRow({
             {actionLabel}
           </button>
         )}
-        {draftedPlayer ? (
-          <span className={styles.playerValue} data-negative={draftedPlayer.value < 0}>
-            ${draftedPlayer.value.toFixed(1)}
-          </span>
-        ) : isUser ? (
+        {!draftedPlayer && isUser && !isCurrent ? (
           <span className={styles.pickSlot}>You</span>
         ) : null}
       </div>
@@ -131,6 +136,18 @@ export default function DraftPickSequence({
 }: DraftPickSequenceProps) {
   const pastPicks = picks.slice(0, currentPickIndex).reverse();
   const currentPick = picks[currentPickIndex];
+  const recentPlayers = pastPicks
+    .slice(0, 5)
+    .map((pick) => (pick.playerDraftedId ? playerMap.get(pick.playerDraftedId) : undefined))
+    .filter((player): player is Player => Boolean(player));
+  const recentPositionCounts = recentPlayers.reduce<Record<string, number>>((counts, player) => {
+    const position = player.positions[0] || "UT";
+    counts[position] = (counts[position] || 0) + 1;
+    return counts;
+  }, {});
+  const recentRun = Object.entries(recentPositionCounts)
+    .sort((a, b) => b[1] - a[1])
+    .find(([, count]) => count >= 3);
 
   return (
     <div className={styles.trackerLayout}>
@@ -159,9 +176,16 @@ export default function DraftPickSequence({
 
       <section className={styles.trackerSection}>
         <div className={styles.sectionHeader}>
-          <span>Past Picks</span>
-          <small>{pastPicks.length > 0 ? `${pastPicks.length} drafted` : "None yet"}</small>
+          <span>Recent Picks</span>
+          <small>{pastPicks.length > 0 ? `${pastPicks.length} total` : "None yet"}</small>
         </div>
+        {recentRun && (
+          <div className={styles.runAlert} role="status">
+            <span className={styles.runPulse} />
+            <strong>{recentRun[0]} run</strong>
+            <span>{recentRun[1]} of the last {recentPlayers.length} picks</span>
+          </div>
+        )}
         <div className={`${styles.pickStack} ${styles.pastPickStack}`}>
           {pastPicks.length > 0 ? (
             pastPicks.map((pick) => {
@@ -171,6 +195,7 @@ export default function DraftPickSequence({
                   key={pick.overallPick}
                   canEditPicks={canEditPicks}
                   index={index}
+                  isLatest={pick.overallPick === currentPickIndex}
                   isLiveDraftMode={isLiveDraftMode}
                   isUser={pick.teamIndex === userTeamIndex}
                   pick={pick}

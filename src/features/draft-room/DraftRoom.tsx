@@ -155,6 +155,7 @@ export default function DraftRoom() {
   const [numRounds, setNumRounds] = useState(30);
   const [draftMode, setDraftMode] = useState<DraftMode>("mock");
   const [simSpeed, setSimSpeed] = useState<"manual" | "paced" | "instant">("paced");
+  const [isSimulationPaused, setIsSimulationPaused] = useState(false);
   const [cpuProfileMode, setCpuProfileMode] = useState<CpuProfileMode>("fixed");
 
   // Algorithm-sandbox weights + presets live in their own hook.
@@ -204,7 +205,7 @@ export default function DraftRoom() {
     calculatePickScoreDetails,
     initialNumRounds: numRounds,
     initialNumTeams: numTeams,
-    onUndoLastPick: () => setSimSpeed("manual"),
+    onUndoLastPick: () => setIsSimulationPaused(true),
   });
 
   const isLiveDraftMode = draftMode === "live";
@@ -263,6 +264,7 @@ export default function DraftRoom() {
 
   const initDraft = useCallback((teamsCount: number, roundsCount: number, userPos: number, profileMode: CpuProfileMode = cpuProfileMode) => {
     resetDraftSequence(teamsCount, roundsCount);
+    setIsSimulationPaused(false);
     setRosterViewTeamIndex(userPos - 1);
     setRoundTargets({});
     setProjectionOverrides({});
@@ -533,7 +535,7 @@ export default function DraftRoom() {
 
   // Effect to drive CPU picks
   useEffect(() => {
-    if (!isDraftStarted || isDraftComplete || !currentPick) return;
+    if (!isDraftStarted || isDraftComplete || !currentPick || isSimulationPaused) return;
     if (isLiveDraftMode) return;
 
     const cpuTeamIndex = currentPick.teamIndex;
@@ -550,7 +552,7 @@ export default function DraftRoom() {
       }
       // If manual, we wait for the user to trigger the click
     }
-  }, [currentPickIndex, userPosition, simSpeed, isDraftComplete, currentPick, executeCpuPick, isDraftStarted, isLiveDraftMode]);
+  }, [currentPickIndex, userPosition, simSpeed, isSimulationPaused, isDraftComplete, currentPick, executeCpuPick, isDraftStarted, isLiveDraftMode]);
 
   // ----------------------------------------------------
   // Configuration Changes
@@ -585,7 +587,10 @@ export default function DraftRoom() {
         setSimSpeed("manual");
       }
     }
-    if (newConfig.simSpeed !== undefined) setSimSpeed(newConfig.simSpeed);
+    if (newConfig.simSpeed !== undefined) {
+      setSimSpeed(newConfig.simSpeed);
+      setIsSimulationPaused(false);
+    }
     if (newConfig.cpuProfileMode !== undefined) setCpuProfileMode(newConfig.cpuProfileMode);
     if (shouldResetDraft) {
       initDraft(nextNumTeams, nextNumRounds, nextUserPosition, newConfig.cpuProfileMode ?? cpuProfileMode);
@@ -862,6 +867,16 @@ export default function DraftRoom() {
             onEditPick={setPickPlayer}
             onFocusPlayer={setFocusedPlayerId}
             isLiveDraftMode={isLiveDraftMode}
+            isDraftStarted={isDraftStarted}
+            isDraftComplete={isDraftComplete}
+            isSimulationPaused={isSimulationPaused}
+            canStepCpu={Boolean(currentPick && currentPick.teamIndex !== userPosition - 1)}
+            canPauseSimulation={simSpeed !== "manual"}
+            onToggleSimulationPause={() => setIsSimulationPaused((paused) => !paused)}
+            onStepCpu={() => {
+              setIsSimulationPaused(true);
+              executeCpuPick();
+            }}
           />
         </section>
 
@@ -1054,6 +1069,7 @@ export default function DraftRoom() {
                 onReset={handleReset}
                 onAutoPick={executeCpuPick}
                 onStartDraft={() => {
+                  setIsSimulationPaused(false);
                   setIsDraftStarted(true);
                   setIsSettingsOpen(false);
                 }}

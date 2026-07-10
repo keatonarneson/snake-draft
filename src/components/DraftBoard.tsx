@@ -21,6 +21,13 @@ interface DraftBoardProps {
   players: Player[];
   cpuProfiles?: CpuProfile[];
   isLiveDraftMode?: boolean;
+  isDraftStarted?: boolean;
+  isDraftComplete?: boolean;
+  isSimulationPaused?: boolean;
+  canPauseSimulation?: boolean;
+  canStepCpu?: boolean;
+  onToggleSimulationPause?: () => void;
+  onStepCpu?: () => void;
   onUndoLastPick?: () => void;
   onEditPick?: (pickIndex: number, playerId: string) => void;
   onFocusPlayer?: (playerId: string) => void;
@@ -34,6 +41,13 @@ export default function DraftBoard({
   players,
   cpuProfiles = [],
   isLiveDraftMode = false,
+  isDraftStarted = false,
+  isDraftComplete = false,
+  isSimulationPaused = false,
+  canPauseSimulation = false,
+  canStepCpu = false,
+  onToggleSimulationPause,
+  onStepCpu,
   onUndoLastPick,
   onEditPick,
   onFocusPlayer,
@@ -62,6 +76,13 @@ export default function DraftBoard({
         onUndoLastPick={onUndoLastPick}
         onOpenProfiles={() => setIsProfilesModalOpen(true)}
         isLiveDraftMode={isLiveDraftMode}
+        isDraftStarted={isDraftStarted}
+        isDraftComplete={isDraftComplete}
+        isSimulationPaused={isSimulationPaused}
+        canPauseSimulation={canPauseSimulation}
+        canStepCpu={canStepCpu}
+        onToggleSimulationPause={onToggleSimulationPause}
+        onStepCpu={onStepCpu}
       />
 
       <DraftPickSequence
