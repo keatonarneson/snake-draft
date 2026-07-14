@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import { buildRosterSlots, ROSTER_SLOTS, SLOT_DISPLAY_LABELS } from "../../engine/rosterSlots";
+import type { TeamSlotAssignments } from "../../engine/rosterSlots";
 import { Player } from "../../types/draft";
 
 interface LeagueRosterBoardProps {
@@ -9,6 +10,8 @@ interface LeagueRosterBoardProps {
   userTeamIndex: number;
   draftedPlayers: { player: Player; teamIndex: number }[];
   numRounds: number;
+  slotAssignmentsByTeam?: TeamSlotAssignments;
+  onSelectTeam?: (teamIndex: number) => void;
 }
 
 function abbreviateName(name: string) {
@@ -24,6 +27,8 @@ export default function LeagueRosterBoard({
   userTeamIndex,
   draftedPlayers,
   numRounds,
+  slotAssignmentsByTeam = {},
+  onSelectTeam,
 }: LeagueRosterBoardProps) {
   // Auto-fit each team's roster into the shared slot layout (no manual
   // assignments here — this is a read-only league overview).
@@ -32,9 +37,9 @@ export default function LeagueRosterBoard({
       const players = draftedPlayers
         .filter((drafted) => drafted.teamIndex === teamIndex)
         .map((drafted) => drafted.player);
-      return buildRosterSlots(players, numRounds, {});
+      return buildRosterSlots(players, numRounds, slotAssignmentsByTeam[teamIndex] || {});
     });
-  }, [teamNames, draftedPlayers, numRounds]);
+  }, [teamNames, draftedPlayers, numRounds, slotAssignmentsByTeam]);
 
   const benchCount = teamRosters[0]?.bench.length ?? 0;
 
@@ -104,7 +109,16 @@ export default function LeagueRosterBoard({
                       borderBottom: isUser ? "2px solid var(--primary)" : "none",
                     }}
                   >
-                    {name}
+                    {onSelectTeam ? (
+                      <button
+                        type="button"
+                        onClick={() => onSelectTeam(teamIndex)}
+                        title={`Open ${name} team view`}
+                        style={{ padding: 0, border: 0, background: "none", color: "inherit", font: "inherit", cursor: "pointer" }}
+                      >
+                        {name}
+                      </button>
+                    ) : name}
                   </th>
                 );
               })}

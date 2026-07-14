@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { calculateCategoryStats } from "../engine/categoryStats";
 import { calculateDraftCapital } from "../engine/draftCapital";
-import { buildRosterSlots, canPlayerUseRosterSlot, ROSTER_SLOTS, SlotAssignment } from "../engine/rosterSlots";
+import { buildRosterSlots, SlotAssignment } from "../engine/rosterSlots";
 import type { LeagueTargets } from "../engine/config";
 import { Player, PlayerStats } from "../types/draft";
 import {
@@ -24,6 +24,8 @@ interface RosterTrackerProps {
   onUpdateProjectionOverride?: (playerId: string, stats: Partial<PlayerStats>) => void;
   onResetProjectionOverride?: (playerId: string) => void;
   targets: LeagueTargets;
+  slotAssignments: Record<string, SlotAssignment>;
+  onMovePlayer: (teamIndex: number, playerId: string, destination: SlotAssignment) => void;
 }
 
 export default function RosterTracker({
@@ -37,8 +39,9 @@ export default function RosterTracker({
   onUpdateProjectionOverride,
   onResetProjectionOverride,
   targets,
+  slotAssignments,
+  onMovePlayer,
 }: RosterTrackerProps) {
-  const [slotAssignmentsByTeam, setSlotAssignmentsByTeam] = useState<Record<number, Record<string, SlotAssignment>>>({});
   const [editingProjectionPlayerId, setEditingProjectionPlayerId] = useState<string | null>(null);
 
   const isUser = teamIndex === userTeamIndex;
@@ -75,47 +78,27 @@ export default function RosterTracker({
     ? sourcePlayerMap.get(editingProjectionPlayerId) || null
     : null;
 
-  const slotAssignments = useMemo(() => {
-    const teamAssignments = slotAssignmentsByTeam[teamIndex] || {};
+  const validSlotAssignments = useMemo(() => {
     const validPlayerIds = new Set(sourceDrafted.map((player) => player.id));
 
     return Object.fromEntries(
-      Object.entries(teamAssignments).filter(([playerId]) => validPlayerIds.has(playerId))
+      Object.entries(slotAssignments).filter(([playerId]) => validPlayerIds.has(playerId))
     );
-  }, [slotAssignmentsByTeam, sourceDrafted, teamIndex]);
+  }, [slotAssignments, sourceDrafted]);
 
   const roster = useMemo(() => {
-    return buildRosterSlots(myDrafted, numRounds, slotAssignments);
-  }, [myDrafted, numRounds, slotAssignments]);
+    return buildRosterSlots(myDrafted, numRounds, validSlotAssignments);
+  }, [myDrafted, numRounds, validSlotAssignments]);
 
-  const stats = useMemo(() => calculateCategoryStats(myDrafted), [myDrafted]);
+  const starters = useMemo(
+    () => roster.active.flatMap((slot) => (slot.player ? [slot.player] : [])),
+    [roster]
+  );
+  const stats = useMemo(() => calculateCategoryStats(starters), [starters]);
 
   const movePlayer = (player: Player, destination: SlotAssignment) => {
     if (!isUser) return;
-
-    const sourceSlot = roster.active.find((slot) => slot.player?.id === player.id);
-    const destinationSlot =
-      destination === "bench" ? null : roster.active.find((slot) => slot.id === destination);
-    const displacedPlayer = destinationSlot?.player;
-
-    setSlotAssignmentsByTeam((current) => {
-      const teamAssignments = { ...(current[teamIndex] || {}) };
-      teamAssignments[player.id] = destination;
-
-      if (displacedPlayer && displacedPlayer.id !== player.id) {
-        const sourceSlotIndex = sourceSlot ? Number(sourceSlot.id.replace("slot-", "")) : -1;
-        const canSwapIntoSource =
-          sourceSlotIndex >= 0 && canPlayerUseRosterSlot(displacedPlayer, ROSTER_SLOTS[sourceSlotIndex]);
-
-        if (canSwapIntoSource) {
-          teamAssignments[displacedPlayer.id] = sourceSlot!.id;
-        } else {
-          delete teamAssignments[displacedPlayer.id];
-        }
-      }
-
-      return { ...current, [teamIndex]: teamAssignments };
-    });
+    onMovePlayer(teamIndex, player.id, destination);
   };
 
   return (

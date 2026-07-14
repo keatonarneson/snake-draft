@@ -11,6 +11,7 @@ import {
 } from "../engine/categoryStats";
 import { calculateProjectedStandings } from "../engine/standings";
 import { Player, PlayerStats } from "../types/draft";
+import type { TeamSlotAssignments } from "../engine/rosterSlots";
 
 type SortKey = "rank" | "team" | "points" | "hitterPoints" | "pitcherPoints" | "players" | "hitters" | "pitchers" | "value" | CategoryKey;
 
@@ -20,6 +21,7 @@ interface StandingsViewProps {
   draftedPlayers: { player: Player; teamIndex: number }[];
   numRounds: number;
   projectionOverrides?: Record<string, Partial<PlayerStats>>;
+  slotAssignmentsByTeam?: TeamSlotAssignments;
 }
 
 export default function StandingsView({
@@ -28,6 +30,7 @@ export default function StandingsView({
   draftedPlayers,
   numRounds,
   projectionOverrides = {},
+  slotAssignmentsByTeam = {},
 }: StandingsViewProps) {
   const [viewMode, setViewMode] = useState<"table" | "chart">("table");
   const [sortKey, setSortKey] = useState<SortKey>("points");
@@ -40,8 +43,9 @@ export default function StandingsView({
       draftedPlayers,
       numRounds,
       projectionOverrides,
+      slotAssignmentsByTeam,
     });
-  }, [teamNames, draftedPlayers, numRounds, userTeamIndex, projectionOverrides]);
+  }, [teamNames, draftedPlayers, numRounds, userTeamIndex, projectionOverrides, slotAssignmentsByTeam]);
 
   const sortedStandings = useMemo(() => {
     return [...standings].sort((a, b) => {

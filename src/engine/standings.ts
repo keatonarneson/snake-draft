@@ -6,7 +6,7 @@ import {
   HITTER_CATEGORIES,
   PITCHER_CATEGORIES,
 } from "./categoryStats";
-import { fitRoster } from "./rosterFit";
+import { buildRosterSlots, type TeamSlotAssignments } from "./rosterSlots";
 import { Player, PlayerStats } from "../types/draft";
 
 export interface DraftedPlayerForStandings {
@@ -47,12 +47,14 @@ export function calculateProjectedStandings({
   draftedPlayers,
   numRounds,
   projectionOverrides = {},
+  slotAssignmentsByTeam = {},
 }: {
   teamNames: string[];
   userTeamIndex: number;
   draftedPlayers: DraftedPlayerForStandings[];
   numRounds: number;
   projectionOverrides?: Record<string, Partial<PlayerStats>>;
+  slotAssignmentsByTeam?: TeamSlotAssignments;
 }): TeamStanding[] {
   const rows: TeamStanding[] = teamNames.map((teamName, teamIndex) => {
     const roster = draftedPlayers
@@ -70,7 +72,8 @@ export function calculateProjectedStandings({
           },
         };
       });
-    const starters = fitRoster(roster, numRounds).active;
+    const fitted = buildRosterSlots(roster, numRounds, slotAssignmentsByTeam[teamIndex] || {});
+    const starters = fitted.active.flatMap((slot) => (slot.player ? [slot.player] : []));
     const stats = calculateCategoryStats(starters);
 
     return {

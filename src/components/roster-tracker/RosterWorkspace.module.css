@@ -1,0 +1,287 @@
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.toolbar,
+.toolbarGroup,
+.summaryGrid,
+.detailGrid,
+.playerMain,
+.playerMeta,
+.rowActions {
+  display: flex;
+  align-items: center;
+}
+
+.toolbar {
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbarGroup {
+  gap: 10px;
+}
+
+.teamSelect {
+  min-width: 190px;
+}
+
+.viewToggle {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.viewToggle button,
+.secondaryButton {
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.viewToggle button {
+  padding: 7px 12px;
+  background: transparent;
+}
+
+.viewToggle button[data-active="true"] {
+  background: var(--primary);
+  color: #fff;
+}
+
+.secondaryButton {
+  padding: 8px 11px;
+  border: 1px solid var(--border-muted);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.secondaryButton:hover {
+  color: var(--text-primary);
+  border-color: rgba(99, 102, 241, 0.38);
+}
+
+.summaryGrid {
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summaryCard {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border-muted);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.summaryCard span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summaryCard strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.summaryCard small {
+  margin-left: 5px;
+  color: var(--text-muted);
+  font-size: 0.64rem;
+}
+
+.tableShell {
+  overflow: auto;
+  max-height: calc(100vh - 390px);
+  min-height: 420px;
+  border: 1px solid var(--border-muted);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.rosterTable {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.rosterTable th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 9px 10px;
+  background: #171a24;
+  color: var(--text-muted);
+  text-align: left;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rosterTable td {
+  padding: 8px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.045);
+  vertical-align: middle;
+}
+
+.rosterRow[data-bench="true"] {
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.rosterRow[data-drop="true"] {
+  background: rgba(99, 102, 241, 0.12);
+  outline: 1px solid rgba(99, 102, 241, 0.5);
+  outline-offset: -1px;
+}
+
+.slotLabel {
+  width: 56px;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-weight: 900;
+}
+
+.playerMain {
+  gap: 8px;
+  min-width: 210px;
+}
+
+.playerMain[data-draggable="true"] {
+  cursor: grab;
+}
+
+.playerMain[data-draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.playerName {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.playerMeta {
+  gap: 5px;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.64rem;
+}
+
+.badge {
+  padding: 2px 5px;
+  border: 1px solid rgba(99, 102, 241, 0.24);
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text-secondary);
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.projection {
+  min-width: 270px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.numeric {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.value {
+  color: var(--secondary);
+  font-family: var(--font-mono);
+  font-weight: 800;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.rowActions {
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.slotSelect {
+  min-width: 105px;
+  padding: 5px 7px;
+  border: 1px solid var(--border-muted);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+}
+
+.editButton {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-muted);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.detailGrid {
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.7fr);
+  gap: 14px;
+}
+
+.capitalShell {
+  min-width: 0;
+}
+
+@media (max-width: 1050px) {
+  .summaryGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar,
+  .toolbarGroup {
+    align-items: stretch;
+  }
+
+  .toolbarGroup {
+    flex-wrap: wrap;
+  }
+
+  .teamSelect {
+    flex: 1;
+  }
+}

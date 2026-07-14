@@ -10,6 +10,7 @@ export const ROSTER_SLOTS = ROSTER_SLOT_SPECS.map((slot) => ({
 
 export type RosterSlotDefinition = typeof ROSTER_SLOTS[number];
 export type SlotAssignment = string | "bench";
+export type TeamSlotAssignments = Record<number, Record<string, SlotAssignment>>;
 
 export interface RosterSlot {
   id: string;
@@ -72,7 +73,7 @@ export function buildRosterSlots(
 
   const unplaced = draftedPlayers.filter(
     (player) => !manuallyPlaced.has(player.id) && !manuallyBenched.has(player.id)
-  );
+  ).sort((a, b) => b.value - a.value);
   const canPlayerUseSlot = (player: Player, slot: RosterSlot) => {
     const slotIndex = Number(slot.id.replace("slot-", ""));
     return canPlayerUseRosterSlot(player, ROSTER_SLOTS[slotIndex]);
@@ -162,4 +163,54 @@ export function buildRosterSlots(
   }
 
   return { active: slots, bench: benchSlots };
+}
+
+/**
+ * Move a player into an eligible slot while preserving a valid swap when the
+ * destination is occupied. Keeping this in the engine lets every roster view
+ * use the same assignment behavior.
+ */
+export function moveRosterPlayer(
+  draftedPlayers: Player[],
+  numRounds: number,
+  assignments: Record<string, SlotAssignment>,
+  playerId: string,
+  destination: SlotAssignment
+): Record<string, SlotAssignment> {
+  const player = draftedPlayers.find((candidate) => candidate.id === playerId);
+  if (!player) return assignments;
+
+  const roster = buildRosterSlots(draftedPlayers, numRounds, assignments);
+  const sourceSlot = roster.active.find((slot) => slot.player?.id === playerId);
+  const destinationSlot = destination === "bench"
+    ? null
+    : roster.active.find((slot) => slot.id === destination);
+  const destinationIndex = destination === "bench"
+    ? -1
+    : Number(destination.replace("slot-", ""));
+
+  if (
+    destinationIndex >= 0 &&
+    (!ROSTER_SLOTS[destinationIndex] || !canPlayerUseRosterSlot(player, ROSTER_SLOTS[destinationIndex]))
+  ) {
+    return assignments;
+  }
+
+  const next = { ...assignments, [playerId]: destination };
+  const displacedPlayer = destinationSlot?.player;
+
+  if (displacedPlayer && displacedPlayer.id !== playerId) {
+    const sourceIndex = sourceSlot ? Number(sourceSlot.id.replace("slot-", "")) : -1;
+    if (
+      sourceIndex >= 0 &&
+      ROSTER_SLOTS[sourceIndex] &&
+      canPlayerUseRosterSlot(displacedPlayer, ROSTER_SLOTS[sourceIndex])
+    ) {
+      next[displacedPlayer.id] = sourceSlot!.id;
+    } else {
+      next[displacedPlayer.id] = "bench";
+    }
+  }
+
+  return next;
 }

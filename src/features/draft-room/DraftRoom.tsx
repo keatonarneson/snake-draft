@@ -17,6 +17,9 @@ import {
   getCpuProfileTemplates,
   selectCpuPick,
   LEAGUE_TARGETS,
+  moveRosterPlayer,
+  type SlotAssignment,
+  type TeamSlotAssignments,
   type LeagueTargets,
 } from "../../engine";
 import SettingsPanel from "../../components/SettingsPanel";
@@ -25,7 +28,7 @@ import DraftBoard from "../../components/DraftBoard";
 import { BoardView } from "../../components/draft-board";
 import PlayerList from "../../components/PlayerList";
 import RosterTracker from "../../components/RosterTracker";
-import { LeagueRosterBoard } from "../../components/roster-tracker";
+import { RosterWorkspace } from "../../components/roster-tracker";
 import DashboardSummary from "../../components/DashboardSummary";
 import StandingsView from "../../components/StandingsView";
 import { useDraftState } from "../../hooks/useDraftState";
@@ -61,6 +64,7 @@ interface DraftSnapshot {
   cpuProfiles: CpuProfile[];
   cpuSavesStrategies: string[];
   projectionOverrides: Record<string, Partial<PlayerStats>>;
+  slotAssignmentsByTeam?: TeamSlotAssignments;
 }
 
 interface DraftQueueBarProps {
@@ -180,6 +184,7 @@ export default function DraftRoom() {
   const [cpuSavesStrategies, setCpuSavesStrategies] = useState<string[]>([]);
   const [cpuProfiles, setCpuProfiles] = useState<CpuProfile[]>([]);
   const [projectionOverrides, setProjectionOverrides] = useState<Record<string, Partial<PlayerStats>>>({});
+  const [slotAssignmentsByTeam, setSlotAssignmentsByTeam] = useState<TeamSlotAssignments>({});
   const [activeCenterView, setActiveCenterView] = useState<CenterView>("draft");
   const [focusedPlayerId, setFocusedPlayerId] = useState<string | null>(null);
   // Settings live in a drawer. Open by default so first load lands on setup.
@@ -268,6 +273,7 @@ export default function DraftRoom() {
     setRosterViewTeamIndex(userPos - 1);
     setRoundTargets({});
     setProjectionOverrides({});
+    setSlotAssignmentsByTeam({});
 
     const profiles = assignCpuProfiles(teamsCount, userPos, profileMode);
     setCpuProfiles(profiles);
@@ -316,6 +322,35 @@ export default function DraftRoom() {
 
     return list;
   }, [picks, currentPickIndex, playerMap, teamNames]);
+
+  const moveRosterPlayerToSlot = useCallback((
+    teamIndex: number,
+    playerId: string,
+    destination: SlotAssignment
+  ) => {
+    const teamPlayers = draftedPlayersDetails
+      .filter((drafted) => drafted.teamIndex === teamIndex)
+      .map((drafted) => drafted.player);
+
+    setSlotAssignmentsByTeam((current) => ({
+      ...current,
+      [teamIndex]: moveRosterPlayer(
+        teamPlayers,
+        numRounds,
+        current[teamIndex] || {},
+        playerId,
+        destination
+      ),
+    }));
+  }, [draftedPlayersDetails, numRounds]);
+
+  const resetRosterAssignments = useCallback((teamIndex: number) => {
+    setSlotAssignmentsByTeam((current) => {
+      const next = { ...current };
+      delete next[teamIndex];
+      return next;
+    });
+  }, []);
 
   // Available players pool
   const availablePlayers = useMemo(() => {
@@ -629,6 +664,7 @@ export default function DraftRoom() {
     cpuProfiles,
     cpuSavesStrategies,
     projectionOverrides,
+    slotAssignmentsByTeam,
   }), [
     picks,
     currentPickIndex,
@@ -645,6 +681,7 @@ export default function DraftRoom() {
     cpuProfiles,
     cpuSavesStrategies,
     projectionOverrides,
+    slotAssignmentsByTeam,
   ]);
 
   // Only start writing once the draft is underway, so a fresh page load never
@@ -693,6 +730,7 @@ export default function DraftRoom() {
     setCpuProfiles(savedDraft.cpuProfiles);
     setCpuSavesStrategies(savedDraft.cpuSavesStrategies);
     setProjectionOverrides(savedDraft.projectionOverrides);
+    setSlotAssignmentsByTeam(savedDraft.slotAssignmentsByTeam ?? {});
 
     // Pin the reset key to the restored shape first, so the shape-change effect
     // won't clear the targets we're about to load (older saves may lack them).
@@ -946,11 +984,20 @@ export default function DraftRoom() {
           )}
 
           {activeCenterView === "roster" && (
-            <LeagueRosterBoard
+            <RosterWorkspace
               teamNames={teamNames}
+              selectedTeamIndex={rosterViewTeamIndex}
               userTeamIndex={userPosition - 1}
               draftedPlayers={draftedPlayersDetails}
               numRounds={numRounds}
+              targets={targets}
+              projectionOverrides={projectionOverrides}
+              slotAssignmentsByTeam={slotAssignmentsByTeam}
+              onSelectTeam={setRosterViewTeamIndex}
+              onMovePlayer={moveRosterPlayerToSlot}
+              onResetAssignments={resetRosterAssignments}
+              onUpdateProjectionOverride={updateProjectionOverride}
+              onResetProjectionOverride={resetProjectionOverride}
             />
           )}
 
@@ -1012,6 +1059,7 @@ export default function DraftRoom() {
               draftedPlayers={draftedPlayersDetails}
               numRounds={numRounds}
               projectionOverrides={projectionOverrides}
+              slotAssignmentsByTeam={slotAssignmentsByTeam}
             />
           )}
         </section>
@@ -1029,6 +1077,8 @@ export default function DraftRoom() {
             projectionOverrides={projectionOverrides}
             onUpdateProjectionOverride={updateProjectionOverride}
             onResetProjectionOverride={resetProjectionOverride}
+            slotAssignments={slotAssignmentsByTeam[rosterViewTeamIndex] || {}}
+            onMovePlayer={moveRosterPlayerToSlot}
           />
         </section>
       </main>
