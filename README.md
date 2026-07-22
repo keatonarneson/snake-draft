@@ -1,4 +1,4 @@
-# DraftRadar
+# Draft Sim
 
 A fantasy baseball **snake-draft assistant**. It runs a mock draft against configurable CPU opponents, ranks the available player pool in real time, tracks your roster and category needs, and projects final rotisserie standings — or you can flip to **live mode** to log the picks of a real draft as it happens.
 

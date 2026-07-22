@@ -796,7 +796,7 @@ export default function DraftRoom() {
             </svg>
           </div>
           <div className={styles.brandText}>
-            <span className={styles.logoTitle}>DraftRadar</span>
+            <span className={styles.logoTitle}>Draft Sim</span>
             <span className={styles.logoSubtitle}>Baseball Draft Engine</span>
           </div>
           <span className={styles.datasetBadge}>{projectionLabel}</span>
