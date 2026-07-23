@@ -5,6 +5,7 @@ export { buildCpuScoreDetails, buildReturnTimeline, formatPercent, getReturnLeve
 export type { ReturnTimelinePoint } from "./playerListMetrics";
 export { PlayerListToolbar } from "./PlayerListToolbar";
 export { PlayerNameCell } from "./PlayerNameCell";
+export { PlayerComparisonModal, PlayerComparisonTray } from "./PlayerComparison";
 export { PlayerPoolRow } from "./PlayerPoolRow";
 export { PlayerProjectionPanel } from "./PlayerProjectionPanel";
 export { PlayerTableHeader } from "./PlayerTableHeader";
@@ -13,4 +14,4 @@ export { ProjectionSummaryCell } from "./ProjectionSummaryCell";
 export { RecommendationScorePanel } from "./RecommendationScorePanel";
 export { ReturnProbabilityCell } from "./ReturnProbabilityCell";
 export { usePlayerListTable } from "./usePlayerListTable";
-export type { SortField, SortOrder } from "./usePlayerListTable";
+export type { ProjectionSortField, SortField, SortOrder } from "./usePlayerListTable";

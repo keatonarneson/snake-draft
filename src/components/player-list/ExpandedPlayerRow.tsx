@@ -28,6 +28,7 @@ interface ExpandedPlayerRowProps {
   player: Player;
   rec?: Recommendation;
   scarcityMap: Record<string, ScarcityInfo>;
+  tableColumnCount: number;
   userTeamIndex: number;
 }
 
@@ -46,6 +47,7 @@ export function ExpandedPlayerRow({
   player,
   rec,
   scarcityMap,
+  tableColumnCount,
   userTeamIndex,
 }: ExpandedPlayerRowProps) {
   const isDrafted = draftedPlayers.some((draftedPlayer) => draftedPlayer.player.id === player.id);
@@ -67,7 +69,7 @@ export function ExpandedPlayerRow({
 
   return (
     <tr style={{ background: "rgba(255, 255, 255, 0.015)" }}>
-      <td colSpan={9} style={{ padding: "16px 20px" }}>
+      <td colSpan={tableColumnCount} style={{ padding: "16px 20px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.2fr", gap: "24px", alignItems: "start" }}>
           <PlayerProjectionPanel player={player} />
           <RecommendationScorePanel draftedCount={draftedPlayers.length} isDrafted={isDrafted} player={player} rec={rec} />

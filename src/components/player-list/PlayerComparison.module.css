@@ -1,0 +1,133 @@
+.tray {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  background: rgba(13, 19, 33, 0.96);
+  border: 1px solid var(--glass-border);
+  border-top-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.trayPlayers,
+.trayActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trayPlayers strong {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.playerChip {
+  padding: 5px 9px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.modalBody {
+  min-height: 0;
+  overflow: auto;
+}
+
+.decisionSummary {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: 8px;
+  background: rgba(6, 182, 212, 0.07);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.decisionSummary strong {
+  color: var(--secondary);
+}
+
+.comparisonGrid {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.8fr) repeat(2, minmax(180px, 1fr));
+  min-width: 560px;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.cornerLabel,
+.playerHeading,
+.metricLabel,
+.metricValue {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.cornerLabel {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.playerHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.playerHeading span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.gridRow {
+  display: contents;
+}
+
+.metricLabel {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.metricValue {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.statGroup {
+  display: contents;
+}
+
+.sectionLabel {
+  grid-column: 1 / -1;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border-bottom: 1px solid var(--border-muted);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  .tray {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

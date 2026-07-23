@@ -3,7 +3,15 @@
 import { useMemo, useState } from "react";
 import { Player } from "../types/draft";
 import { Recommendation, DraftPick, ScarcityInfo, CpuProfile } from "../engine";
-import { PlayerListToolbar, PlayerPoolRow, PlayerTableHeader, usePlayerListTable } from "./player-list";
+import {
+  PlayerComparisonModal,
+  PlayerComparisonTray,
+  PlayerListToolbar,
+  PlayerPoolRow,
+  PlayerTableHeader,
+  usePlayerListTable,
+} from "./player-list";
+import { getProjectionView } from "./player-list/projectionColumns";
 
 const PLAYER_ROW_HEIGHT = 42;
 const PLAYER_TABLE_HEIGHT = 580;
@@ -77,12 +85,23 @@ export default function PlayerList({
     recommendations,
   });
   const [tableScrollTop, setTableScrollTop] = useState(0);
+  const [comparisonIds, setComparisonIds] = useState<string[]>([]);
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false);
   const draftedPlayerMap = useMemo(() => {
     return new Map(draftedPlayers.map((draftedPlayer) => [draftedPlayer.player.id, draftedPlayer]));
   }, [draftedPlayers]);
   const targetedPlayerIds = useMemo(() => {
     return new Set(Object.values(roundTargets).flatMap((target) => target.playerIds));
   }, [roundTargets]);
+  const playerMap = useMemo(() => {
+    return new Map([
+      ...availablePlayers.map((player) => [player.id, player] as const),
+      ...draftedPlayers.map((draftedPlayer) => [draftedPlayer.player.id, draftedPlayer.player] as const),
+    ]);
+  }, [availablePlayers, draftedPlayers]);
+  const comparisonPlayers = comparisonIds
+    .map((playerId) => playerMap.get(playerId))
+    .filter((player): player is Player => Boolean(player));
   const visibleRange = useMemo(() => {
     const start = Math.max(0, Math.floor(tableScrollTop / PLAYER_ROW_HEIGHT) - PLAYER_ROW_OVERSCAN);
     const visibleCount = Math.ceil(PLAYER_TABLE_HEIGHT / PLAYER_ROW_HEIGHT) + PLAYER_ROW_OVERSCAN * 2;
@@ -93,6 +112,15 @@ export default function PlayerList({
   const visiblePlayers = sortedPlayers.slice(visibleRange.start, visibleRange.end);
   const topSpacerHeight = visibleRange.start * PLAYER_ROW_HEIGHT;
   const bottomSpacerHeight = Math.max(0, (sortedPlayers.length - visibleRange.end) * PLAYER_ROW_HEIGHT);
+  const projectionView = getProjectionView(selectedPosition);
+  const tableColumnCount = projectionView === "mixed" ? 9 : 13;
+  const toggleComparisonPlayer = (playerId: string) => {
+    setComparisonIds((current) => {
+      if (current.includes(playerId)) return current.filter((id) => id !== playerId);
+      if (current.length >= 2) return current;
+      return [...current, playerId];
+    });
+  };
 
   return (
     <div className="card glow-panel" style={{ flexGrow: 1 }}>
@@ -113,17 +141,23 @@ export default function PlayerList({
         onScroll={(event) => setTableScrollTop(event.currentTarget.scrollTop)}
       >
         <table className="premium-table">
-          <PlayerTableHeader handleSort={handleSort} sortField={sortField} sortOrder={sortOrder} />
+          <PlayerTableHeader
+            handleSort={handleSort}
+            projectionView={projectionView}
+            sortField={sortField}
+            sortOrder={sortOrder}
+          />
           <tbody>
             {topSpacerHeight > 0 && (
               <tr aria-hidden="true">
-                <td colSpan={9} style={{ height: `${topSpacerHeight}px`, padding: 0, border: 0 }} />
+                <td colSpan={tableColumnCount} style={{ height: `${topSpacerHeight}px`, padding: 0, border: 0 }} />
               </tr>
             )}
             {visiblePlayers.map((player) => (
               <PlayerPoolRow
                 key={player.id}
                 availablePlayers={availablePlayers}
+                compareDisabled={comparisonIds.length >= 2 && !comparisonIds.includes(player.id)}
                 cpuProfiles={cpuProfiles}
                 cpuSavesStrategies={cpuSavesStrategies}
                 currentPickIndex={currentPickIndex}
@@ -134,6 +168,7 @@ export default function PlayerList({
                 isDraftComplete={isDraftComplete}
                 isDraftStarted={isDraftStarted}
                 isExpanded={expandedPlayerId === player.id}
+                isCompared={comparisonIds.includes(player.id)}
                 isFocused={focusedPlayerId === player.id}
                 isOnClock={isOnClock}
                 isPlayerTargeted={targetedPlayerIds.has(player.id)}
@@ -141,9 +176,11 @@ export default function PlayerList({
                 numRounds={numRounds}
                 onDraftPlayer={onDraftPlayer}
                 onFocusPlayer={onFocusPlayer}
+                onToggleCompare={toggleComparisonPlayer}
                 onToggleTargetPlayer={onToggleTargetPlayer}
                 picks={picks}
                 player={player}
+                projectionView={projectionView}
                 rec={recMap.get(player.id)}
                 roundTargets={roundTargets}
                 scarcityMap={scarcityMap}
@@ -153,12 +190,25 @@ export default function PlayerList({
             ))}
             {bottomSpacerHeight > 0 && (
               <tr aria-hidden="true">
-                <td colSpan={9} style={{ height: `${bottomSpacerHeight}px`, padding: 0, border: 0 }} />
+                <td colSpan={tableColumnCount} style={{ height: `${bottomSpacerHeight}px`, padding: 0, border: 0 }} />
               </tr>
             )}
           </tbody>
         </table>
       </div>
+      <PlayerComparisonTray
+        players={comparisonPlayers}
+        onClear={() => setComparisonIds([])}
+        onCompare={() => setIsComparisonOpen(true)}
+        onRemove={toggleComparisonPlayer}
+      />
+      <PlayerComparisonModal
+        isOpen={isComparisonOpen}
+        onClose={() => setIsComparisonOpen(false)}
+        players={comparisonPlayers}
+        recommendations={recMap}
+        scarcityMap={scarcityMap}
+      />
     </div>
   );
 }

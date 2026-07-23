@@ -1,7 +1,9 @@
 import { SortField, SortOrder } from "./usePlayerListTable";
+import { getProjectionColumns, ProjectionView } from "./projectionColumns";
 
 interface PlayerTableHeaderProps {
   handleSort: (field: SortField) => void;
+  projectionView: ProjectionView;
   sortField: SortField;
   sortOrder: SortOrder;
 }
@@ -11,7 +13,9 @@ function sortMarker(field: SortField, sortField: SortField, sortOrder: SortOrder
   return sortOrder === "asc" ? "▲" : "▼";
 }
 
-export function PlayerTableHeader({ handleSort, sortField, sortOrder }: PlayerTableHeaderProps) {
+export function PlayerTableHeader({ handleSort, projectionView, sortField, sortOrder }: PlayerTableHeaderProps) {
+  const projectionColumns = getProjectionColumns(projectionView);
+
   return (
     <thead>
       <tr>
@@ -26,7 +30,17 @@ export function PlayerTableHeader({ handleSort, sortField, sortOrder }: PlayerTa
         <th onClick={() => handleSort("value")} style={{ cursor: "pointer", width: "90px" }}>
           Auction $ {sortMarker("value", sortField, sortOrder)}
         </th>
-        <th style={{ width: "160px" }}>Projections</th>
+        {projectionView === "mixed" ? (
+          <th style={{ width: "180px" }}>Projections</th>
+        ) : projectionColumns.map((column) => (
+          <th
+            key={column.field}
+            onClick={() => handleSort(column.field)}
+            style={{ cursor: "pointer", textAlign: "right", width: "64px" }}
+          >
+            {column.label} {sortMarker(column.field, sortField, sortOrder)}
+          </th>
+        ))}
         <th onClick={() => handleSort("pReturn")} style={{ cursor: "pointer", width: "100px" }}>
           Return Prob {sortMarker("pReturn", sortField, sortOrder)}
         </th>

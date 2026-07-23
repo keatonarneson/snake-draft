@@ -19,6 +19,21 @@ export function PlayerListToolbar({
   setShowDrafted,
   showDrafted,
 }: PlayerListToolbarProps) {
+  const hitterPositions = positionFilterOptions.filter((position) =>
+    ["C", "1B", "2B", "3B", "SS", "CI", "MI", "OF", "UT"].includes(position),
+  );
+  const pitcherPositions = positionFilterOptions.filter((position) => ["P", "SP", "RP"].includes(position));
+
+  const positionButton = (position: string) => (
+    <button
+      key={position}
+      className={`${styles.filterBtn} ${selectedPosition === position ? styles.filterBtnActive : ""}`}
+      onClick={() => setSelectedPosition(position)}
+    >
+      {position}
+    </button>
+  );
+
   return (
     <>
       <div className={styles.tableHeaderActions}>
@@ -77,16 +92,16 @@ export function PlayerListToolbar({
           />
         </div>
 
-        <div className={styles.filterGroup}>
-          {positionFilterOptions.map((pos) => (
-            <button
-              key={pos}
-              className={`${styles.filterBtn} ${selectedPosition === pos ? styles.filterBtnActive : ""}`}
-              onClick={() => setSelectedPosition(pos)}
-            >
-              {pos}
-            </button>
-          ))}
+        <div className={styles.positionFilters}>
+          <div className={styles.allFilter}>{positionButton("ALL")}</div>
+          <div className={styles.filterSection} role="group" aria-label="Hitter positions">
+            <span className={styles.filterLabel}>Hitters</span>
+            <div className={styles.filterGroup}>{hitterPositions.map(positionButton)}</div>
+          </div>
+          <div className={styles.filterSection} role="group" aria-label="Pitcher positions">
+            <span className={styles.filterLabel}>Pitchers</span>
+            <div className={styles.filterGroup}>{pitcherPositions.map(positionButton)}</div>
+          </div>
         </div>
       </div>
     </>

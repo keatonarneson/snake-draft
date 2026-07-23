@@ -1,6 +1,28 @@
 import { Player } from "../../types/draft";
+import { getProjectionColumns, ProjectionView } from "./projectionColumns";
 
-export function ProjectionSummaryCell({ player }: { player: Player }) {
+interface ProjectionSummaryCellProps {
+  player: Player;
+  projectionView: ProjectionView;
+}
+
+function formatProjectionValue(player: Player, field: keyof Player["stats"]): string {
+  const value = player.stats[field];
+  if (value === undefined) return "—";
+  if (field === "AVG") return value.toFixed(3);
+  if (field === "ERA" || field === "WHIP") return value.toFixed(2);
+  return value.toFixed(0);
+}
+
+export function ProjectionSummaryCell({ player, projectionView }: ProjectionSummaryCellProps) {
+  if (projectionView !== "mixed") {
+    return getProjectionColumns(projectionView).map((column) => (
+      <td key={column.field} style={{ fontFamily: "var(--font-mono)", textAlign: "right" }}>
+        {formatProjectionValue(player, column.field)}
+      </td>
+    ));
+  }
+
   if (player.isPitcher) {
     return (
       <td>
